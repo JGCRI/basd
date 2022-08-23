@@ -3,7 +3,7 @@ import xarray
 from netCDF4 import num2date
 
 
-def ma2a(a, raise_error: bool):
+def ma2a(a, raise_error: bool = False):
     """
     Turns masked array into array, replacing missing values and infs by nans.
 

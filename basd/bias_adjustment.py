@@ -3,7 +3,7 @@ import basd.utils as util
 
 
 class Adjustment:
-    def __int__(self, obs_hist, sim_hist, sim_fut, variable, step_size=1, distribution=None, months=None,
+    def __init__(self, obs_hist, sim_hist, sim_fut, variable, step_size=1, distribution=None, months=None,
                 lower_bound=None, lower_threshold=None, upper_bound=None, upper_threshold=None,
                 n_iterations=0, halfwin_ubc=0, trend_preservation='additive', n_quantiles=50,
                 p_value_eps=1.e-10, max_change_factor=100., max_adjustment_factor=9.,
@@ -43,13 +43,13 @@ class Adjustment:
         self.repeat_warnings = repeat_warnings
 
         # Assert that parameters make sense
-        self.assert_validity_of_step_size()
-        self.assert_validity_of_months()
-        self.assert_consistency_of_bounds_and_thresholds()
-        self.assert_consistency_of_distribution_and_bounds()
+        #self.assert_validity_of_step_size()
+        #self.assert_validity_of_months()
+        #self.assert_consistency_of_bounds_and_thresholds()
+        #self.assert_consistency_of_distribution_and_bounds()
 
         # Assert that input data has same spatial dimension
-        coords = util.analyze_input_nc(obs_hist, variable)
+        #coords = util.analyze_input_nc(obs_hist, variable)
 
     def assert_validity_of_step_size(self):
         """
