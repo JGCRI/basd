@@ -18,7 +18,7 @@ class Adjustment:
         self.variable = variable
 
         # Setting the parameters for the adjustment
-        self.step_size = step_size,
+        self.step_size = step_size
         self.months = months if not step_size else [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         self.distribution = distribution
         self.trendless_bound_frequency = trendless_bound_frequency
@@ -48,8 +48,13 @@ class Adjustment:
         self.assert_consistency_of_bounds_and_thresholds()
         self.assert_consistency_of_distribution_and_bounds()
 
-        # Assert that input data has same spatial dimension
-        #coords = util.analyze_input_nc(obs_hist, variable)
+        # TODO: Assert that input data has same spatial dimension
+        # coords = util.analyze_input_nc(obs_hist, variable)
+
+        # TODO: Assert full period coverage if using running window mode
+        # TODO: Assert uniform number of days between input data
+        # TODO: Abort if there are only missing values in any of the data input
+        # TODO: Scale data if halfwin_upper_bound_climatology
 
     def assert_validity_of_step_size(self):
         """
