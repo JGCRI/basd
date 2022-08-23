@@ -43,10 +43,10 @@ class Adjustment:
         self.repeat_warnings = repeat_warnings
 
         # Assert that parameters make sense
-        #self.assert_validity_of_step_size()
-        #self.assert_validity_of_months()
-        #self.assert_consistency_of_bounds_and_thresholds()
-        #self.assert_consistency_of_distribution_and_bounds()
+        self.assert_validity_of_step_size()
+        self.assert_validity_of_months()
+        self.assert_consistency_of_bounds_and_thresholds()
+        self.assert_consistency_of_distribution_and_bounds()
 
         # Assert that input data has same spatial dimension
         #coords = util.analyze_input_nc(obs_hist, variable)
