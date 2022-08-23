@@ -28,7 +28,8 @@ setup(
         "numpy>=1.23",
         "PyYAML>=6",
         "xarray",
-        "netCDF4"
+        "netCDF4",
+        "pandas"
     ],
     extras_require={
         'dev': [
