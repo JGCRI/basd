@@ -30,6 +30,7 @@ setup(
         "PyYAML>=6",
         "netCDF4",
         "pandas",
+        "scipy",
         "seaborn",
         "xarray"
     ],
