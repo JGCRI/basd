@@ -1,14 +1,12 @@
 import numpy as np
+import pandas as pd
+
+import basd.ba_params as bap
 import basd.utils as util
 
 
 class Adjustment:
-    def __init__(self, obs_hist, sim_hist, sim_fut, variable, step_size=1, distribution=None, months=None,
-                lower_bound=None, lower_threshold=None, upper_bound=None, upper_threshold=None,
-                n_iterations=0, halfwin_ubc=0, trend_preservation='additive', n_quantiles=50,
-                p_value_eps=1.e-10, max_change_factor=100., max_adjustment_factor=9.,
-                if_all_invalid_use=None, adjust_p_values=False, detrend=False, unconditional_ccs_transfer=False,
-                trendless_bound_frequency=False, repeat_warnings=False, invalid_value_warnings=False):
+    def __init__(self, obs_hist, sim_hist, sim_fut, variable, params):
 
         # Setting the data
         self.obs_hist = obs_hist
@@ -16,37 +14,7 @@ class Adjustment:
         self.sim_fut = sim_fut
         self.sim_fut_ba = None
         self.variable = variable
-
-        # Setting the parameters for the adjustment
-        self.step_size = step_size
-        self.months = months if not step_size else [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        self.distribution = distribution
-        self.trendless_bound_frequency = trendless_bound_frequency
-        self.unconditional_ccs_transfer = unconditional_ccs_transfer
-        self.detrend = detrend
-        self.adjust_p_values = adjust_p_values
-        self.if_all_invalid_use = if_all_invalid_use
-        self.max_adjustment_factor = max_adjustment_factor
-        self.max_change_factor = max_change_factor
-        self.p_value_eps = p_value_eps
-        self.n_quantiles = n_quantiles
-        self.trend_preservation = trend_preservation
-        self.halfwin_ubc = halfwin_ubc
-        self.n_iterations = n_iterations
-        self.upper_threshold = upper_threshold
-        self.upper_bound = upper_bound
-        self.lower_threshold = lower_threshold
-        self.lower_bound = lower_bound
-
-        # Quality of life params
-        self.invalid_value_warnings = invalid_value_warnings
-        self.repeat_warnings = repeat_warnings
-
-        # Assert that parameters make sense
-        self.assert_validity_of_step_size()
-        self.assert_validity_of_months()
-        self.assert_consistency_of_bounds_and_thresholds()
-        self.assert_consistency_of_distribution_and_bounds()
+        self.params = params
 
         # TODO: Assert that input data has same spatial dimension
         # coords = util.analyze_input_nc(obs_hist, variable)
@@ -55,72 +23,6 @@ class Adjustment:
         # TODO: Assert uniform number of days between input data
         # TODO: Abort if there are only missing values in any of the data input
         # TODO: Scale data if halfwin_upper_bound_climatology
-
-    def assert_validity_of_step_size(self):
-        """
-        Raises an assertion error if step_size is not an uneven integer between 1
-        and 31.
-        """
-        step_sizes_allowed = np.arange(1, 32, 2)
-        msg = 'step_size has to be equal to 0 or an uneven integer between 1 and 31'
-        assert self.step_size in step_sizes_allowed, msg
-
-    def assert_validity_of_months(self):
-        """
-        Raises an assertion error if any of the numbers in months is not in
-        {1,...,12}.
-        """
-        months_allowed = np.arange(1, 13)
-        for month in self.months:
-            assert month in months_allowed, f'found {month} in months'
-
-    def assert_consistency_of_bounds_and_thresholds(self):
-        """
-        Raises an assertion error if the pattern of specified and
-        unspecified bounds and thresholds is not valid or if
-        lower_bound < lower_threshold < upper_threshold < upper_bound
-        does not hold.
-        """
-        lower = self.lower_bound is not None and self.lower_threshold is not None
-        upper = self.upper_bound is not None and self.upper_threshold is not None
-
-        if not lower:
-            msg = 'lower_bound is not None and lower_threshold is None'
-            assert self.lower_bound is None, msg
-            msg = 'lower_bound is None and lower_threshold is not None'
-            assert self.lower_threshold is None, msg
-        if not upper:
-            msg = 'upper_bound is not None and upper_threshold is None'
-            assert self.upper_bound is None, msg
-            msg = 'upper_bound is None and upper_threshold is not None'
-            assert self.upper_threshold is None, msg
-
-        if lower:
-            assert self.lower_bound < self.lower_threshold, 'lower_bound >= lower_threshold'
-        if upper:
-            assert self.upper_bound > self.upper_threshold, 'upper_bound <= upper_threshold'
-        if lower and upper:
-            msg = 'lower_threshold >= upper_threshold'
-            assert self.lower_threshold < self.upper_threshold, msg
-
-    def assert_consistency_of_distribution_and_bounds(self):
-        """
-        Raises an assertion error if the distribution is not consistent with the
-        pattern of specified and unspecified bounds and thresholds.
-        """
-        if self.distribution is not None:
-            lower = self.lower_bound is not None and self.lower_threshold is not None
-            upper = self.upper_bound is not None and self.upper_threshold is not None
-
-            msg = self.distribution + ' distribution '
-            if self.distribution == 'normal':
-                assert not lower and not upper, msg + 'can not have bounds'
-            elif self.distribution in ['weibull', 'gamma', 'rice']:
-                assert lower and not upper, msg + 'must only have lower bound'
-            elif self.distribution == 'beta':
-                assert lower and upper, msg + 'must have lower and upper bound'
-            else:
-                raise AssertionError(msg + 'not supported')
 
     def assert_consistency_of_data_resolution(self):
         """
@@ -140,3 +42,85 @@ class Adjustment:
         assert coords.get('obs_hist').get('lon').size == coords.get('sim_hist').get('lon').size == coords.get(
             'sim_fut').get('lon').size
 
+    def adjust_bias_one_location(self, i_loc):
+        """
+        Bias adjusts one grid cell
+
+        Parameters
+        ----------
+        self: Adjustment
+            Bias adjustment object
+        i_loc: tuple
+            index of grid cell to bias adjust
+
+        Returns
+        -------
+        sim_fut_ba_loc: xarray.DataArray
+            adjusted time series with times, lat and lon
+        """
+        # Get data at one location
+        obs_hist_loc = self.obs_hist[self.variable][i_loc]
+        sim_hist_loc = self.sim_hist[self.variable][i_loc]
+        sim_fut_loc = self.sim_fut[self.variable][i_loc]
+
+        # Put in dictionary for easy iteration
+        data_loc = {
+            'obs_hist': obs_hist_loc,
+            'sim_hist': sim_hist_loc,
+            'sim_fut': sim_fut_loc
+        }
+
+        # Get long term mean over each time series using valid values
+        long_term_mean = {
+            'obs_hist': util.average_valid_values(obs_hist_loc.values, np.nan,
+                                                  self.params.lower_bound, self.params.lower_threshold,
+                                                  self.params.upper_bound, self.params.upper_threshold),
+            'sim_hist': util.average_valid_values(sim_hist_loc.values, np.nan,
+                                                  self.params.lower_bound, self.params.lower_threshold,
+                                                  self.params.upper_bound, self.params.upper_threshold),
+            'sim_fut': util.average_valid_values(sim_fut_loc.values, np.nan,
+                                                 self.params.lower_bound, self.params.lower_threshold,
+                                                 self.params.upper_bound, self.params.upper_threshold)
+        }
+
+        # Scraping the time from the data and turning into pandas date time array
+        days, month_numbers, years = util.time_scraping(self)
+
+        # TODO: Implement option for month-to-month bias adjustment
+        # Get window centers for running window mode
+        if self.params.step_size:
+            window_centers = util.window_centers_for_running_bias_adjustment(days, self.params.step_size)
+        else:
+            msg = 'Month to month bias adjustment not yet implemented. Set step_size to be non-zero.'
+            raise Exception(msg)
+
+        # Result
+        result = sim_fut_loc.copy
+
+        # TODO: Implement month to month adjustment
+        # Adjust bias for each window center
+        for window_center in window_centers:
+            data_this_window, years_this_window = util.get_data_in_window(window_center, data_loc,
+                                                                          days, years,
+                                                                          long_term_mean)
+
+            # Send data to adjust bias one month
+            result_this_window = util.adjust_bias_one_month(data_this_window, years_this_window,
+                                                            long_term_mean, self.params)
+
+            # put central part of bias-adjusted data into result
+            m_ba = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center, 31)
+            m_keep = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center,
+                                                                     self.params.step_size, years['sim_fut'])
+            m_ba_keep = np.in1d(m_ba, m_keep)
+            # TODO: Why are we saving some of result and some of the input?
+            result[m_keep] = result_this_window[m_ba_keep]
+
+            # TODO: How should we return. This is going to be a time series for every day
+            #   in sim_fut. Thus we can create a variable equivalent to sim_fut_loc, but put
+            #   these results into the values
+            sim_fut_ba_loc = sim_fut_loc.copy()
+
+            sim_fut_ba_loc.values = result
+
+        return sim_fut_ba_loc
