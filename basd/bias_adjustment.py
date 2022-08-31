@@ -1,7 +1,5 @@
 import numpy as np
-import pandas as pd
 
-import basd.ba_params as bap
 import basd.utils as util
 
 
@@ -106,7 +104,7 @@ class Adjustment:
 
             # Send data to adjust bias one month
             result_this_window = util.adjust_bias_one_month(data_this_window, years_this_window,
-                                                            long_term_mean, self.params)
+                                                            self.params)
 
             # put central part of bias-adjusted data into result
             m_ba = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center, 31)
@@ -116,11 +114,4 @@ class Adjustment:
             # TODO: Why are we saving some of result and some of the input?
             result.data[m_keep] = result_this_window[m_ba_keep]
 
-            # TODO: How should we return. This is going to be a time series for every day
-            #   in sim_fut. Thus we can create a variable equivalent to sim_fut_loc, but put
-            #   these results into the values
-            sim_fut_ba_loc = sim_fut_loc.copy()
-
-            sim_fut_ba_loc.values = result
-
-        return sim_fut_ba_loc
+        return result
