@@ -963,6 +963,7 @@ def check_shape_loc_scale(spsdotwhat, shape_loc_scale):
 
 
 # TODO: Add option to try not fixing scale and location
+# TODO: Return distribution parameters to somewhere accessible by user
 def fit(spsdotwhat, x, fwords: dict):
     """
     Attempts to fit a distribution from the family defined through spsdotwhat

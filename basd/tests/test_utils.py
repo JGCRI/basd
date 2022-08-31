@@ -57,18 +57,14 @@ class TestUtils(unittest.TestCase):
         # Year of each date
         years = dates.year
 
-        # TODO: Don't really understand this.
-        #       Seems like days should be between 1-365 (or maybe 366),
-        #       but we have them in 1-31. Maybe this should change depending on modes
         # Should return indexes where we want data for running window mode
         indexes = util.window_indices_for_running_bias_adjustment(days, window_center, window_width)
-        # Starting at the second day of the year:
+
         # TODO: This only makes sense if we have data for full years
-        #   indexes for 2019: -14 -- 16 which in turn will be 0 -- 16, and 442 -- 455
-        #   indexes for 2020: 351=366-15 -- 366+155=381
         #   This is why we assert full time coverage earlier in the run?
-        #   Fill empty values if the full period isn't covered?
         correct = np.concatenate((np.arange(0, 17), np.arange(351, 382), np.arange(717, 731)))
+
+        # Assertion of equality
         np.testing.assert_array_equal(indexes, correct)
 
     def test_ccs_transfer_sim2obs(self):
