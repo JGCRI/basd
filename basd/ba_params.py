@@ -23,7 +23,7 @@ class Parameters:
             'mixed'          # Preserve multiplicative or additive trend or mix of
                              # both depending on sign and magnitude of bias. Purely
                              # additive trends are preserved if adjustment factors
-                             # of a multiplicative adjustment would be greater then
+                             # of a multiplicative adjustment would be greater than
                              # max_adjustment_factor.
             'bounded'        # Preserve trend of bounded variable. Requires
                              # specification of lower_bound and upper_bound. It is
