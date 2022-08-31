@@ -95,7 +95,7 @@ class Adjustment:
             raise Exception(msg)
 
         # Result
-        result = sim_fut_loc.copy
+        result = sim_fut_loc.copy()
 
         # TODO: Implement month to month adjustment
         # Adjust bias for each window center
@@ -114,7 +114,7 @@ class Adjustment:
                                                                      self.params.step_size, years['sim_fut'])
             m_ba_keep = np.in1d(m_ba, m_keep)
             # TODO: Why are we saving some of result and some of the input?
-            result[m_keep] = result_this_window[m_ba_keep]
+            result.data[m_keep] = result_this_window[m_ba_keep]
 
             # TODO: How should we return. This is going to be a time series for every day
             #   in sim_fut. Thus we can create a variable equivalent to sim_fut_loc, but put
