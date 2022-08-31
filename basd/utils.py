@@ -23,14 +23,14 @@ def ma2a(a, raise_error: bool = False):
 
     Parameters
     ----------
-    a : array or masked array
+    a: array or masked array
         Array to convert.
     raise_error : boolean, optional
         Whether to raise an error if missing values, infs or nans are found.
 
     Returns
     -------
-    b : array
+    b: array
         Data array.
 
     """
@@ -55,24 +55,24 @@ def average_valid_values(a, if_all_invalid_use=np.nan,
 
     Parameters
     ----------
-    a : array or masked array
+    a: array or masked array
         If this is an array then infs and nans in 'a' are replaced.
         If this is a masked array then infs, nans, and missing values in a.data
         are replaced using a.mask to indicate missing values.
     if_all_invalid_use : float, optional
         Used as replacement of invalid values if no valid values can be found.
-    lower_bound : float, optional
+    lower_bound: float, optional
         Lower bound of values in time series.
     lower_threshold : float, optional
         Lower threshold of values in time series.
-    upper_bound : float, optional
+    upper_bound: float, optional
         Upper bound of values in time series.
-    upper_threshold : float, optional
+    upper_threshold: float, optional
         Upper threshold of values in time series.
 
     Returns
     -------
-    average : float or array of floats
+    average: float or array of floats
         Result of averaging. The result is scalar if 'a' is one-dimensional.
         Otherwise, the result is an array containing averages for every location.
 
@@ -134,21 +134,21 @@ def window_indices_for_running_bias_adjustment(
 
     Parameters
     ----------
-    days : np.array
+    days: np.array
         Day-of-year time series associated to data array from which data shall
         be selected using the resulting indices.
-    window_center : int
+    window_center: int
         Day of year at the center of each window.
-    window_width : int
+    window_width: int
         Width of each window in days.
-    years : array, optional
+    years: array, optional
         Year time series associated to data array from which data shall
         be selected using the resulting indices. If provided, it is ensured
         that windows do not extend into the following or previous year.
 
     Returns
     -------
-    i_window : array
+    i_window: np.Array
         Window indices.
 
     """
@@ -201,15 +201,15 @@ def percentile1d(a, p):
 
     Parameters
     ----------
-    a : np.array
+    a: np.array
         Input array.
-    p : np.Array
+    p: np.Array
         Percentages expressed as real numbers in [0, 1] for which percentiles
         are computed.
 
     Returns
     -------
-    percentiles : np.array
+    percentiles: np.array
         Percentiles
 
     """
@@ -276,23 +276,23 @@ def sample_invalid_values(a, seed=None, if_all_invalid_use=np.nan, warn=False):
 
     Parameters
     ----------
-    a : array or masked array
+    a: array or masked array
         If this is an array then infs and nans in 'a' are replaced.
         If this is a masked array then infs, nans, and missing values in a.data
         are replaced using a.mask to indicate missing values.
-    seed : int, optional
+    seed: int, optional
         Used to seed the random number generator before replacing invalid
         values.
-    if_all_invalid_use : float or array of floats, optional
+    if_all_invalid_use: float or array of floats, optional
         Used as replacement of invalid values if no valid values can be found.
-    warn : boolean, optional
+    warn: boolean, optional
         Warn user about replacements being made.
 
     Returns
     -------
-    d_replaced : array
+    d_replaced: array
         Result of invalid data replacement.
-    l_invalid : array
+    l_invalid: array
         Boolean array indicating indices of replacement.
 
     """
@@ -370,20 +370,20 @@ def sample_invalid_values_core(d, seed, if_all_invalid_use, warn, l_invalid):
 
     Parameters
     ----------
-    d : np.array
+    d: np.array
         Containing values to be replaced.
-    seed : int
+    seed: int
         Used to seed the random number generator before sampling.
     if_all_invalid_use : float
         Used as replacement of invalid values if no valid values can be found.
-    warn : boolean
+    warn: boolean
         Warn user about replacements being made.
-    l_invalid : np.Array
+    l_invalid: np.Array
         Indicating which values in 'a' are invalid and hence to be replaced.
 
     Returns
     -------
-    d_replaced : np.array
+    d_replaced: np.array
         Result of invalid data replacement.
 
     """
@@ -439,19 +439,19 @@ def randomize_censored_values_core(y, bound, threshold, inverse, power, lower):
 
     Parameters
     ----------
-    y : np.array
+    y: np.array
         Time series to be (de-)randomized.
-    bound : float
+    bound: float
         Lower or upper bound of values in time series.
-    threshold : float
+    threshold: float
         Lower or upper threshold of values in time series.
-    inverse : boolean
+    inverse: boolean
         If True, values beyond threshold in y are set to bound.
         If False, values beyond threshold in y are randomized.
-    power : float
+    power: float
         Numbers for randomizing values are drawn from a uniform distribution
         and then taken to this power.
-    lower : boolean
+    lower: boolean
         If True/False, consider bound and threshold to be lower/upper bound and
         lower/upper threshold, respectively.
 
@@ -483,19 +483,19 @@ def randomize_censored_values(x,
 
     Parameters
     ----------
-    x : np.array
+    x: np.array
         Time series to be (de-)randomized.
-    lower_bound : float, optional
+    lower_bound: float, optional
         Lower bound of values in time series.
-    lower_threshold : float, optional
+    lower_threshold: float, optional
         Lower threshold of values in time series.
-    upper_bound : float, optional
+    upper_bound: float, optional
         Upper bound of values in time series.
-    upper_threshold : float, optional
+    upper_threshold: float, optional
         Upper threshold of values in time series.
-    inplace : boolean, optional
+    inplace: boolean, optional
         If True, change x in-place. If False, change a copy of x.
-    inverse : boolean, optional
+    inverse: boolean, optional
         If True, values beyond thresholds in x are set to the respective bound.
         If False, values beyond thresholds in x are randomized, i.e. values that
         exceed upper_threshold are replaced by random numbers from the
@@ -503,19 +503,19 @@ def randomize_censored_values(x,
         of lower_threshold are replaced by random numbers from the interval
         (upper_threshold, upper_bound]. The ranks of the censored values are
         preserved using a random tiebreaker.
-    seed : int, optional
+    seed: int, optional
         Used to seed the random number generator before replacing values beyond
         threshold.
-    lower_power : float, optional
+    lower_power: float, optional
         Numbers for randomizing values that fall short of lower_threshold are
         drawn from a uniform distribution and then taken to this power.
-    upper_power : float, optional
+    upper_power: float, optional
         Numbers for randomizing values that exceed upper_threshold are drawn
         from a uniform distribution and then taken to this power.
 
     Returns
     -------
-    x : np.array
+    x: np.array
         Randomized or de-randomized time series.
 
     """
@@ -620,27 +620,30 @@ def ccs_transfer_sim2obs(
 
     Parameters
     ----------
-    x_obs_hist : float or np.Array
+    x_obs_hist: float or np.Array
         Historical observation(s).
-    x_sim_hist : float or np.Array
+    x_sim_hist: float or np.Array
         Historical simulation(s).
-    x_sim_fut : float or np.Array
+    x_sim_fut: float or np.Array
         Future simulation(s).
-    lower_bound : float, optional
+    lower_bound: float, optional
         Lower bound of values in input and output data.
-    upper_bound : float, optional
+    upper_bound: float, optional
         Upper bound of values in input and output data.
 
     Returns
     -------
-    x_obs_fut : float or array
+    x_obs_fut: float or array
         Pseudo future observation(s).
 
     """
     # change scalar inputs to arrays
-    if np.isscalar(x_obs_hist): x_obs_hist = np.array([x_obs_hist])
-    if np.isscalar(x_sim_hist): x_sim_hist = np.array([x_sim_hist])
-    if np.isscalar(x_sim_fut): x_sim_fut = np.array([x_sim_fut])
+    if np.isscalar(x_obs_hist):
+        x_obs_hist = np.array([x_obs_hist])
+    if np.isscalar(x_sim_hist):
+        x_sim_hist = np.array([x_sim_hist])
+    if np.isscalar(x_sim_fut):
+        x_sim_fut = np.array([x_sim_fut])
 
     # check input
     assert lower_bound < upper_bound, 'lower_bound >= upper_bound'
@@ -789,14 +792,14 @@ def map_quantiles_non_parametric_brute_force(x, y):
 
     Parameters
     ----------
-    x : array
+    x: array
         Simulated time series.
-    y : array
+    y: array
         Observed time series.
 
     Returns
     -------
-    z : array
+    z: array
         Result of quantile mapping.
 
     """
@@ -906,7 +909,7 @@ def map_quantiles_parametric_trend_preserving(data, params):
 
     Returns
     -------
-    x_sim_fut_ba : np.Array
+    x_sim_fut_ba: np.Array
         Result of bias adjustment.
 
     """
@@ -938,20 +941,19 @@ def map_quantiles_parametric_trend_preserving(data, params):
     y = x_source.copy()
 
     # determine indices of values to be mapped
-    y, i_source, i_target = indexes_to_map(x_source, x_target, y,
+    y, i_source, i_target = indexes_to_map(x_source, x_target, y, params,
                                            p_lower_target, p_upper_target,
-                                           params, lower, upper)
+                                           lower, upper)
+
+    # break here if target distributions cannot be determined
+    if not np.any(i_target):
+        msg = 'unable to do any quantile mapping' \
+              + ': leaving %i value(s) unadjusted' % np.sum(i_source)
+        warnings.warn(msg)
+        return y
 
     # map quantiles
-    while np.any(i_source):
-        # break here if target distributions cannot be determined
-        if not np.any(i_target):
-            msg = 'unable to do any quantile mapping' \
-                  + ': leaving %i value(s) unadjusted' % np.sum(i_source)
-            warnings.warn(msg)
-            break
-
-        result = map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, params)
+    result = map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, params)
 
     return result
 
@@ -964,52 +966,12 @@ def map_quantiles_non_parametric_trend_preserving(data, params):
 
     Parameters
     ----------
-    x_obs_hist : array
-        Time series of observed climate data representing the historical or
-        training time period.
-    x_sim_hist : array
-        Time series of simulated climate data representing the historical or
-        training time period.
-    x_sim_fut : array
-        Time series of simulated climate data representing the future or
-        application time period.
-    trend_preservation : str, optional
-        Kind of trend preservation:
-        'additive'       # Preserve additive trend.
-        'multiplicative' # Preserve multiplicative trend, ensuring
-                         # 1/max_change_factor <= change factor
-                         #                     <= max_change_factor.
-        'mixed'          # Preserve multiplicative or additive trend or mix of
-                         # both depending on sign and magnitude of bias. Purely
-                         # additive trends are preserved if adjustment factors
-                         # of a multiplicative adjustment would be greater then
-                         # max_adjustment_factor.
-        'bounded'        # Preserve trend of bounded variable. Requires
-                         # specification of lower_bound and upper_bound. It is
-                         # ensured that the resulting values stay within these
-                         # bounds.
-    n_quantiles : int, optional
-        Number of quantile-quantile pairs used for non-parametric quantile
-        mapping.
-    max_change_factor : float, optional
-        Maximum change factor applied in non-parametric quantile mapping with
-        multiplicative or mixed trend preservation.
-    max_adjustment_factor : float, optional
-        Maximum adjustment factor applied in non-parametric quantile mapping
-        with mixed trend preservation.
-    adjust_obs : boolean, optional
-        If True then transfer simulated climate change signal to x_obs_hist,
-        otherwise apply non-parametric quantile mapping to x_sim_fut.
-    lower_bound : float, optional
-        Lower bound of values in x_obs_hist, x_sim_hist, and x_sim_fut. Used
-        for bounded trend preservation.
-    upper_bound : float, optional
-        Upper bound of values in x_obs_hist, x_sim_hist, and x_sim_fut. Used
-        for bounded trend preservation.
+    data: Adjustment
+    params: Parameters
 
     Returns
     -------
-    y : array
+    y: array
         Result of quantile mapping or climate change signal transfer.
 
     """
