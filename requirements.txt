@@ -1,2 +1,8 @@
+matplotlib
+netCDF4
 numpy>=1.23
+pandas
 PyYAML>=5.4.1
+scipy
+seaborn
+xarray

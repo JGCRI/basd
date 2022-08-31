@@ -25,8 +25,14 @@ setup(
     python_requires='>=3.8.*, <4',
     include_package_data=True,
     install_requires=[
+        "matplotlib",
         "numpy>=1.23",
         "PyYAML>=6",
+        "netCDF4",
+        "pandas",
+        "scipy",
+        "seaborn",
+        "xarray"
     ],
     extras_require={
         'dev': [
