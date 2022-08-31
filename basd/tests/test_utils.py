@@ -1,9 +1,11 @@
+import random
 import unittest
 
 import numpy as np
 import numpy.ma as ma
 import pandas as pd
 
+import basd
 import basd.utils as util
 
 
@@ -66,8 +68,70 @@ class TestUtils(unittest.TestCase):
         #   indexes for 2020: 351=366-15 -- 366+155=381
         #   This is why we assert full time coverage earlier in the run?
         #   Fill empty values if the full period isn't covered?
-        print(indexes)
-        print(days.size)
+        correct = np.concatenate((np.arange(0, 17), np.arange(351, 382), np.arange(717, 731)))
+        np.testing.assert_array_equal(indexes, correct)
+
+    def test_ccs_transfer_sim2obs(self):
+        small = 0.25
+        med = 0.5
+        big = 0.75
+
+        zerobias = util.ccs_transfer_sim2obs(med, med, big)
+        negbias = util.ccs_transfer_sim2obs(med, small, big)
+        negbiasadd = util.ccs_transfer_sim2obs(big, med, small)
+        posbias = util.ccs_transfer_sim2obs(small, big, med)
+        posbiasadd = util.ccs_transfer_sim2obs(small, med, big)
+
+        assert zerobias == 0.75
+        assert negbias == 1-0.5/3
+        assert negbiasadd == 0.5
+        assert posbias == 0.5/3
+        assert posbiasadd == 0.5
+
+    def test_extreme_value_probabilities(self):
+        seed = np.random.RandomState(1)
+        data = {
+            'obs_hist': seed.weibull(1, 10),
+            'sim_hist': seed.weibull(1.5, 10),
+            'sim_fut': seed.weibull(2, 10)
+        }
+
+        # Lower bound only
+        params = basd.Parameters(lower_bound=0, lower_threshold=0.1,
+                                 unconditional_ccs_transfer=True)
+        lower = True
+        upper = False
+        plt, put, plout = util.extreme_value_probabilities(data, params, lower, upper)
+        assert plt == 0.1
+        assert put is None
+        assert plout is None
+
+        # Lower and upper bound and no CCS transfer
+        params = basd.Parameters(lower_bound=0, lower_threshold=0.1,
+                                 upper_bound=1000, upper_threshold=999,
+                                 unconditional_ccs_transfer=False)
+        upper = True
+        plt, put, plout = util.extreme_value_probabilities(data, params, lower, upper)
+        assert plt == 0.1
+        assert put == 0
+        assert plout == 0.1
+
+        # Upper bound only
+        params = basd.Parameters(upper_bound=1000, upper_threshold=999,
+                                 unconditional_ccs_transfer=True)
+        lower = False
+        plt, put, plout = util.extreme_value_probabilities(data, params, lower, upper)
+        assert plt is None
+        assert put == 0
+        assert plout is None
+
+        # No bounds
+        params = basd.Parameters()
+        upper = False
+        plt, put, plout = util.extreme_value_probabilities(data, params, lower, upper)
+        assert plt is None
+        assert put is None
+        assert plout is None
 
 
 if __name__ == '__main__':
