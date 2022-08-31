@@ -4,7 +4,6 @@ import warnings
 import pandas as pd
 from pandas import Series
 import scipy.interpolate as spi
-import scipy.linalg as spl
 import scipy.stats as sps
 
 # Dictionary of possible distribution params implemented thus far
@@ -15,6 +14,11 @@ DISTRIBUTION_PARAMS = {
     'beta': sps.beta,
     'rice': sps.rice
 }
+
+
+# TODO: Implement function for parsing dataset dimensions and attributes
+def analyze_input_nc(dataset, variable):
+    return dataset, variable
 
 
 def ma2a(a, raise_error: bool = False):
@@ -111,7 +115,7 @@ def window_centers_for_running_bias_adjustment(days, step_size):
     Returns
     -------
     days_center: np.Array
-        Array of days to center windows around
+        Days to center windows around
     """
     # TODO: Understand this better
     days_max = np.max(days['sim_fut'])
@@ -536,7 +540,7 @@ def randomize_censored_values(x,
     return y
 
 
-def adjust_bias_one_month(data, years, long_term_mean, params):
+def adjust_bias_one_month(data, years, params):
     # Detrend and randomize censored values
     for key, y in years.items():
         # TODO: Implement detrending
@@ -615,7 +619,7 @@ def ccs_transfer_sim2obs(
         x_obs_hist, x_sim_hist, x_sim_fut,
         lower_bound=0., upper_bound=1.):
     """
-    Generates pseudo future observation(s) by transfering a simulated climate
+    Generates pseudo future observation(s) by transferring a simulated climate
     change signal to historical observation(s) respecting the given bounds.
 
     Parameters
@@ -652,25 +656,35 @@ def ccs_transfer_sim2obs(
         assert np.all(x >= lower_bound), 'found ' + x_name + ' < lower_bound'
         assert np.all(x <= upper_bound), 'found ' + x_name + ' > upper_bound'
 
-    # compute x_obs_fut
+    # Compute x_obs_fut
+    # Indexes for each type of bias
     i_neg_bias = x_sim_hist < x_obs_hist
     i_zero_bias = x_sim_hist == x_obs_hist
     i_pos_bias = x_sim_hist > x_obs_hist
+
+    # If x_sim_fut < x_sim_hist < x_obs_hist or x_sim_fut > x_sim_hist > x_obs_hist
     i_additive = np.logical_or(
         np.logical_and(i_neg_bias, x_sim_fut < x_sim_hist),
         np.logical_and(i_pos_bias, x_sim_fut > x_sim_hist))
+
+    # Empty result
     x_obs_fut = np.empty_like(x_obs_hist)
-    x_obs_fut[i_neg_bias] = upper_bound - \
-                            (upper_bound - x_obs_hist[i_neg_bias]) * \
-                            (upper_bound - x_sim_fut[i_neg_bias]) / \
-                            (upper_bound - x_sim_hist[i_neg_bias])
+
+    # Ratio for negative bias case
+    neg_ratio = (upper_bound - x_sim_fut[i_neg_bias]) / (upper_bound - x_sim_hist[i_neg_bias])
+    # Values for negative bias case
+    x_obs_fut[i_neg_bias] = upper_bound - (upper_bound - x_obs_hist[i_neg_bias]) * neg_ratio
+
+    # Values for zero bias case
     x_obs_fut[i_zero_bias] = x_sim_fut[i_zero_bias]
-    x_obs_fut[i_pos_bias] = lower_bound + \
-                            (x_obs_hist[i_pos_bias] - lower_bound) * \
-                            (x_sim_fut[i_pos_bias] - lower_bound) / \
-                            (x_sim_hist[i_pos_bias] - lower_bound)
-    x_obs_fut[i_additive] = x_obs_hist[i_additive] + \
-                            x_sim_fut[i_additive] - x_sim_hist[i_additive]
+
+    # Ratio for positive bias case
+    pos_ratio = (x_sim_fut[i_pos_bias] - lower_bound) / (x_sim_hist[i_pos_bias] - lower_bound)
+    # Values for positive bias case
+    x_obs_fut[i_pos_bias] = lower_bound + (x_obs_hist[i_pos_bias] - lower_bound) * pos_ratio
+
+    # Values for additive case
+    x_obs_fut[i_additive] = x_obs_hist[i_additive] + x_sim_fut[i_additive] - x_sim_hist[i_additive]
 
     # make sure x_obs_fut is within bounds
     x_obs_fut = np.maximum(lower_bound, np.minimum(upper_bound, x_obs_fut))
@@ -761,23 +775,27 @@ def indexes_to_map(x_source, x_target, y, params, p_lower_target, p_upper_target
     i_source = np.ones(x_source.shape, dtype=bool)
     i_target = np.ones(x_target.shape, dtype=bool)
     if lower:
+        if p_lower_target > 0:
+            lower_threshold_source = percentile1d(x_source, np.array([p_lower_target]))[0]
+        elif not upper:
+            lower_threshold_source = params.lower_bound
+        else:
+            lower_threshold_source = params.lower_bound - 1e-10 * (params.upper_bound - params.lower_bound)
         # make sure that lower_threshold_source < x_source
         # because otherwise sps.beta.ppf does not work
-        lower_threshold_source = \
-            percentile1d(x_source, np.array([p_lower_target]))[0] \
-                if p_lower_target > 0 else params.lower_bound if not upper else \
-                params.lower_bound - 1e-10 * (params.upper_bound - params.lower_bound)
         i_lower = x_source <= lower_threshold_source
         i_source = np.logical_and(i_source, np.logical_not(i_lower))
         i_target = np.logical_and(i_target, x_target > params.lower_threshold)
         y[i_lower] = params.lower_bound
     if upper:
+        if p_upper_target > 0:
+            upper_threshold_source = percentile1d(x_source, np.array([1. - p_upper_target]))[0]
+        elif not lower:
+            upper_threshold_source = params.upper_bound
+        else:
+            upper_threshold_source = params.upper_bound + 1e-10 * (params.upper_bound - params.lower_bound)
         # make sure that x_source < upper_threshold_source
         # because otherwise sps.beta.ppf does not work
-        upper_threshold_source = \
-            percentile1d(x_source, np.array([1. - p_upper_target]))[0] \
-                if p_upper_target > 0 else params.upper_bound if not lower else \
-                params.upper_bound + 1e-10 * (params.upper_bound - params.lower_bound)
         i_upper = x_source >= upper_threshold_source
         i_source = np.logical_and(i_source, np.logical_not(i_upper))
         i_target = np.logical_and(i_target, x_target < params.upper_threshold)
@@ -792,14 +810,14 @@ def map_quantiles_non_parametric_brute_force(x, y):
 
     Parameters
     ----------
-    x: array
+    x: np.Array
         Simulated time series.
-    y: array
+    y: np.Array
         Observed time series.
 
     Returns
     -------
-    z: array
+    z: np.Array
         Result of quantile mapping.
 
     """
@@ -819,8 +837,8 @@ def map_quantiles_non_parametric_brute_force(x, y):
     return z
 
 
-def map_quantiles_non_parametric_with_constant_extrapolation():
-    return True
+def map_quantiles_non_parametric_with_constant_extrapolation(x, q_sim, q_obs):
+    return x, q_sim, q_obs
 
 
 def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, params):
@@ -854,11 +872,22 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
         else:
             x_source_map = x_source
 
-        # fit distributions to x_source and x_target
-        # TODO: Create function which tries to do this (MLE fit) then method of moments
-        #   and then non-parametric if both of those fits fail
-        shape_loc_scale_source = spsdotwhat.fit(x_source_fit)
-        shape_loc_scale_target = spsdotwhat.fit(x_target_fit)
+        # Fix location and scale parameters
+        floc = params.lower_threshold if lower else None
+        fscale = params.upper_threshold - params.lower_threshold if lower and upper else None
+        fwords = {'floc': floc, 'fscale': fscale}
+
+        # Rice and weibull can't handle fscale parameter
+        if params.distribution in ['rice', 'weibull']:
+            fwords = {'floc': floc}
+
+        # Fit distributions to x_source and x_target
+        shape_loc_scale_source = fit(spsdotwhat, x_source_fit, fwords)
+        shape_loc_scale_target = fit(spsdotwhat, x_source_fit, fwords)
+
+        # This just uses MLE without fixing scale/location parameters ever
+        # shape_loc_scale_source = spsdotwhat.fit(x_source_fit)
+        # shape_loc_scale_target = spsdotwhat.fit(x_target_fit)
 
     # do non-parametric quantile mapping if needed
     if shape_loc_scale_source is None or shape_loc_scale_target is None:
@@ -895,6 +924,116 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
     return y
 
 
+def check_shape_loc_scale(spsdotwhat, shape_loc_scale):
+    """
+    Analyzes how distribution fitting has worked.
+
+    Parameters
+    ----------
+    spsdotwhat : sps distribution class
+        Known classes are [sps.norm, sps.weibull_min, sps.gamma, sps.rice,
+        sps.beta].
+    shape_loc_scale : tuple
+        Fitted shape, location, and scale parameter values.
+
+    Returns
+    -------
+    i : int
+        0 if everything is fine,
+        1 if there are infs or nans in shape_loc_scale,
+        2 if at least one value in shape_loc_scale is out of bounds,
+        3 if spsdotwhat is unknown.
+
+    """
+    # Return 1 if infs or nans
+    if np.any(np.isnan(shape_loc_scale)) or np.any(np.isinf(shape_loc_scale)):
+        return 1
+    # Variance for normal dist must be positive
+    elif spsdotwhat == sps.norm:
+        return 2 if shape_loc_scale[1] <= 0 else 0
+    # Weibull, gamma and rice distributions have positive parameter bounds
+    elif spsdotwhat in [sps.weibull_min, sps.gamma, sps.rice]:
+        return 2 if shape_loc_scale[0] <= 0 or shape_loc_scale[2] <= 0 else 0
+    # Bounds for bet distribution
+    elif spsdotwhat == sps.beta:
+        return 2 if shape_loc_scale[0] <= 0 or shape_loc_scale[1] <= 0 \
+            or shape_loc_scale[0] > 1e10 or shape_loc_scale[1] > 1e10 else 0
+    else:
+        return 3
+
+
+# TODO: Add option to try not fixing scale and location
+def fit(spsdotwhat, x, fwords: dict):
+    """
+    Attempts to fit a distribution from the family defined through spsdotwhat
+    to the data represented by x, holding parameters fixed according to fwords.
+
+    A maximum likelihood estimation of distribution parameter values is tried
+    first. If that fails the method of moments is tried for some distributions.
+
+    Parameters
+    ----------
+    spsdotwhat : sps distribution class
+        Known classes are [sps.norm, sps.weibull_min, sps.gamma, sps.rice,
+        sps.beta].
+    x: np.Array
+        Data to be fitted.
+    fwords: dict
+        Optional location and scale parameters held fixed when fitting
+
+    Returns
+    -------
+    shape_loc_scale: tuple
+        Fitted shape, location, and scale parameter values if fitting worked,
+        otherwise None.
+    """
+    # Try maximum likelihood estimation
+    try:
+        shape_loc_scale = spsdotwhat.fit(x, **fwords)
+    except Exception as e:
+        print(f'Exception: {e.__class__}, was unable to fit using MLE')
+        shape_loc_scale = (np.nan,)
+
+    # Try maximum likelihood estimation
+    if check_shape_loc_scale(spsdotwhat, shape_loc_scale):
+        msg = 'Maximum likelihood estimation failed. Trying method of moments.'
+        if spsdotwhat == sps.gamma:
+            msg += 'Method of moments'
+            x_mean = np.mean(x) - fwords['floc']
+            x_var = np.var(x)
+            scale = x_var / x_mean
+            shape = x_mean / scale
+            shape_loc_scale = (shape, fwords['floc'], scale)
+        elif spsdotwhat == sps.beta:
+            msg += 'Method of moments'
+            y = (x - fwords['floc']) / fwords['fscale']
+            y_mean = np.mean(y)
+            y_var = np.var(y)
+            p = np.square(y_mean) * (1. - y_mean) / y_var - y_mean
+            q = p * (1. - y_mean) / y_mean
+            shape_loc_scale = (p, q, fwords['floc'], fwords['fscale'])
+
+    else:
+        msg = 'Maximum likelihood estimation succeeded.'
+
+    # Check again
+    if check_shape_loc_scale(spsdotwhat, shape_loc_scale):
+        msg = 'Failed fit: returning None'
+        warnings.warn(msg)
+        return None
+    elif msg != 'Maximum likelihood estimation succeeded.':
+        msg += ' succeeded.'
+
+    # do rough goodness of fit test to filter out worst fits using KS test
+    ks_stat = sps.kstest(x, spsdotwhat.name, args=shape_loc_scale)[0]
+    if ks_stat > .5:
+        msg += ' Fit is not good: returning None.'
+        warnings.warn(msg)
+        return None
+
+    return shape_loc_scale
+
+
 def map_quantiles_parametric_trend_preserving(data, params):
     """
     Adjusts biases using the trend-preserving parametric quantile mapping method
@@ -918,7 +1057,6 @@ def map_quantiles_parametric_trend_preserving(data, params):
 
     # Get time series arrays from dict
     x_obs_hist = data['obs_hist']
-    x_sim_hist = data['sim_hist']
     x_sim_fut = data['sim_fut']
 
     # Get data within thresholds and indexes of these observations
@@ -1008,9 +1146,9 @@ def map_quantiles_non_parametric_trend_preserving(data, params):
         p = np.interp(x_obs_hist, q_obs_hist, p_zeroone)
     else:
         p = np.interp(x_sim_fut, q_sim_fut, p_zeroone)
-    F_sim_fut_inv = np.interp(p, p_zeroone, q_sim_fut)
-    F_sim_hist_inv = np.interp(p, p_zeroone, q_sim_hist)
-    F_obs_hist_inv = np.interp(p, p_zeroone, q_obs_hist)
+    cdf_sim_fut_inv = np.interp(p, p_zeroone, q_sim_fut)
+    cdf_sim_hist_inv = np.interp(p, p_zeroone, q_sim_hist)
+    cdf_obs_hist_inv = np.interp(p, p_zeroone, q_obs_hist)
 
     # do augmented quantile delta mapping
     if params.trend_preservation == 'bounded':
@@ -1018,30 +1156,30 @@ def map_quantiles_non_parametric_trend_preserving(data, params):
         assert params.lower_bound is not None and params.upper_bound is not None, msg
         assert params.lower_bound < params.upper_bound, 'lower_bound >= upper_bound'
         y = ccs_transfer_sim2obs(
-            F_obs_hist_inv, F_sim_hist_inv, F_sim_fut_inv,
+            cdf_obs_hist_inv, cdf_sim_hist_inv, cdf_sim_fut_inv,
             params.lower_bound, params.upper_bound)
     elif params.trend_preservation in ['mixed', 'multiplicative']:
         assert params.max_change_factor > 1, 'max_change_factor <= 1'
         with np.errstate(divide='ignore', invalid='ignore'):
-            y = np.where(F_sim_hist_inv == 0, 1., F_sim_fut_inv / F_sim_hist_inv)
+            y = np.where(cdf_sim_hist_inv == 0, 1., cdf_sim_fut_inv / cdf_sim_hist_inv)
             y[y > params.max_change_factor] = params.max_change_factor
             y[y < 1. / params.max_change_factor] = 1. / params.max_change_factor
-        y *= F_obs_hist_inv
+        y *= cdf_obs_hist_inv
         if params.trend_preservation == 'mixed':  # if not then we are done here
             assert params.max_adjustment_factor > 1, 'max_adjustment_factor <= 1'
-            y_additive = F_obs_hist_inv + F_sim_fut_inv - F_sim_hist_inv
+            y_additive = cdf_obs_hist_inv + cdf_sim_fut_inv - cdf_sim_hist_inv
             fraction_multiplicative = np.zeros_like(y)
-            fraction_multiplicative[F_sim_hist_inv >= F_obs_hist_inv] = 1.
-            i_transition = np.logical_and(F_sim_hist_inv < F_obs_hist_inv,
-                                          F_obs_hist_inv < params.max_adjustment_factor * F_sim_hist_inv)
+            fraction_multiplicative[cdf_sim_hist_inv >= cdf_obs_hist_inv] = 1.
+            i_transition = np.logical_and(cdf_sim_hist_inv < cdf_obs_hist_inv,
+                                          cdf_obs_hist_inv < params.max_adjustment_factor * cdf_sim_hist_inv)
             fraction_multiplicative[i_transition] = .5 * (1. +
-                                                          np.cos((F_obs_hist_inv[i_transition] /
-                                                                  F_sim_hist_inv[i_transition] - 1.) *
+                                                          np.cos((cdf_obs_hist_inv[i_transition] /
+                                                                  cdf_sim_hist_inv[i_transition] - 1.) *
                                                                  np.pi / (params.max_adjustment_factor - 1.)))
             y = fraction_multiplicative * y + (1. -
                                                fraction_multiplicative) * y_additive
     elif params.trend_preservation == 'additive':
-        y = F_obs_hist_inv + F_sim_fut_inv - F_sim_hist_inv
+        y = cdf_obs_hist_inv + cdf_sim_fut_inv - cdf_sim_hist_inv
     else:
         msg = 'trend_preservation = ' + params.trend_preservation + ' not supported'
         raise AssertionError(msg)
