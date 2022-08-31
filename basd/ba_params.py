@@ -14,7 +14,7 @@ class Parameters:
 
         Parameters
         ----------
-        trend_preservation : str, optional
+        trend_preservation: str, optional
             Kind of trend preservation:
             'additive'       # Preserve additive trend.
             'multiplicative' # Preserve multiplicative trend, ensuring
@@ -29,24 +29,27 @@ class Parameters:
                              # specification of lower_bound and upper_bound. It is
                              # ensured that the resulting values stay within these
                              # bounds.
-        n_quantiles : int, optional
+        n_quantiles: int, optional
             Number of quantile-quantile pairs used for non-parametric quantile
             mapping.
-        max_change_factor : float, optional
+        max_change_factor: float, optional
             Maximum change factor applied in non-parametric quantile mapping with
             multiplicative or mixed trend preservation.
-        max_adjustment_factor : float, optional
+        max_adjustment_factor: float, optional
             Maximum adjustment factor applied in non-parametric quantile mapping
             with mixed trend preservation.
-        adjust_obs : boolean, optional
+        adjust_obs: boolean, optional
             If True then transfer simulated climate change signal to x_obs_hist,
             otherwise apply non-parametric quantile mapping to x_sim_fut.
-        lower_bound : float, optional
+        lower_bound: float, optional
             Lower bound of values in x_obs_hist, x_sim_hist, and x_sim_fut. Used
             for bounded trend preservation.
-        upper_bound : float, optional
+        upper_bound: float, optional
             Upper bound of values in x_obs_hist, x_sim_hist, and x_sim_fut. Used
             for bounded trend preservation.
+        adjust_obs: boolean, optional
+            If True then transfer simulated climate change signal to x_obs_hist,
+            otherwise apply non-parametric quantile mapping to x_sim_fut.
         """
         # Setting the parameters for the adjustment
         self.step_size = step_size
@@ -68,6 +71,7 @@ class Parameters:
         self.upper_bound = upper_bound
         self.lower_threshold = lower_threshold
         self.lower_bound = lower_bound
+        self.adjust_obs = adjust_obs
 
         # Quality of life params
         self.invalid_value_warnings = invalid_value_warnings
