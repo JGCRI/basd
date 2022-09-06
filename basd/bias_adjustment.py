@@ -1,6 +1,7 @@
 import numpy as np
 
 import basd.utils as util
+import basd.one_loc_output as olo
 
 
 class Adjustment:
@@ -40,7 +41,7 @@ class Adjustment:
         assert coords.get('obs_hist').get('lon').size == coords.get('sim_hist').get('lon').size == coords.get(
             'sim_fut').get('lon').size
 
-    def adjust_bias_one_location(self, i_loc):
+    def adjust_bias_one_location(self, i_loc, full_details=True):
         """
         Bias adjusts one grid cell
 
@@ -50,6 +51,8 @@ class Adjustment:
             Bias adjustment object
         i_loc: tuple
             index of grid cell to bias adjust
+        full_details: bool
+            Should function return full details of run, or just the time series array
 
         Returns
         -------
@@ -113,5 +116,8 @@ class Adjustment:
             m_ba_keep = np.in1d(m_ba, m_keep)
             # TODO: Why are we saving some of result and some of the input?
             result.data[m_keep] = result_this_window[m_ba_keep]
+
+        if full_details:
+            return olo.BaLocOutput(result, sim_fut_loc, self.variable, self.params)
 
         return result
