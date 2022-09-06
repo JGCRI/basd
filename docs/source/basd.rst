@@ -12,6 +12,14 @@ Subpackages
 Submodules
 ----------
 
+basd.ba\_params module
+----------------------
+
+.. automodule:: basd.ba_params
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 basd.bias\_adjustment module
 ----------------------------
 
@@ -24,6 +32,14 @@ basd.config module
 ------------------
 
 .. automodule:: basd.config
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+basd.one\_loc\_output module
+----------------------------
+
+.. automodule:: basd.one_loc_output
    :members:
    :undoc-members:
    :show-inheritance:

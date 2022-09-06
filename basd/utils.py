@@ -476,6 +476,63 @@ def randomize_censored_values_core(y, bound, threshold, inverse, power, lower):
             y[i] = np.sort(v)[r.values.astype(int) - 1]
 
 
+def subtract_or_add_trend(x, years, trend=None):
+    """
+    Subtracts or adds trend from or to x.
+
+    Parameters
+    ----------
+    x: np.Array
+        Time series.
+    years: np.Array
+        Years of time points of x used to subtract or add trend at annual
+        temporal resolution.
+    trend: array, optional
+        Trend line. If provided then this is the trend line added to x.
+        Otherwise, a trend line is computed and subtracted from x
+
+    Returns
+    -------
+    y: np.Array
+        Result of trend subtraction or addition from or to x.
+    trend: np.Array, optional
+        Trend line. Is only returned if the parameter trend is None.
+
+    """
+    assert x.size == years.size, 'size of x != size of years'
+    unique_years = np.unique(years)
+
+    # compute trend
+    if trend is None:
+        annual_means = np.array([np.mean(x[years == y]) for y in unique_years])
+        r = sps.linregress(unique_years, annual_means)
+        if r.pvalue < .05:  # detrend preserving multi-year mean value
+            trend = r.slope * (unique_years - np.mean(unique_years))
+        else:  # do not detrend because trend is insignificant
+            trend = np.zeros(unique_years.size, dtype=x.dtype)
+        return_trend = True
+    else:
+        msg = 'size of trend array != number of unique years'
+        assert trend.size == unique_years.size, msg
+        trend = -trend
+        return_trend = False
+
+    # subtract or add trend
+    if np.any(trend):
+        y = np.empty_like(x)
+        for i, year in enumerate(unique_years):
+            is_year = years == year
+            y[is_year] = x[is_year] - trend[i]
+    else:
+        y = x.copy()
+
+    # return result(s)
+    if return_trend:
+        return y, trend
+    else:
+        return y
+
+
 def randomize_censored_values(x,
                               lower_bound=None, lower_threshold=None,
                               upper_bound=None, upper_threshold=None,
@@ -542,8 +599,15 @@ def randomize_censored_values(x,
 
 def adjust_bias_one_month(data, years, params):
     # Detrend and randomize censored values
+    # Saving future trend for adding back later
+    trend_sim_fut = None
     for key, y in years.items():
         # TODO: Implement detrending
+        if params.detrend:
+            data[key], t = subtract_or_add_trend(data[key], y)
+            # Save future trend for adding back later
+            if key == 'sim_fut':
+                trend_sim_fut = t
 
         # Randomizing censored values (above/below thresholds)
         randomize_censored_values(data[key],
@@ -556,6 +620,8 @@ def adjust_bias_one_month(data, years, params):
     y = map_quantiles_parametric_trend_preserving(data, params)
 
     # TODO: Implement re-introducing the trend
+    if params.detrend:
+        y = subtract_or_add_trend(y, years['sim_fut'], trend_sim_fut)
 
     # TODO: assert to infs or nans
 
