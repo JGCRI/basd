@@ -155,6 +155,86 @@ class Adjustment:
         self.sim_hist = self.datasets['sim_hist']
         self.sim_fut = self.datasets['sim_fut']
 
+    def running_window_mode(self, result, window_centers, data_loc, days, years, long_term_mean):
+        """
+        Performs bias adjustment in running window mode
+
+        Parameters
+        ----------
+        result: xr.DataArray
+            Copy of the data to be adjusted (in 1D xarray)
+        window_centers: np.Array
+            List of days to center window around
+        data_loc: dict
+            the three data arrays that we need in the specified location
+        days: dict
+            array of days for each input data array
+        years: dict
+            array of years for each input data array
+        long_term_mean: dict
+            array of means for each input data array
+
+        Returns
+        -------
+        result: x.DataArray
+            1D array containing time series of adjusted values
+        """
+        # Adjust bias for each window center
+        for window_center in window_centers:
+            data_this_window, years_this_window = util.get_data_in_window(window_center, data_loc,
+                                                                          days, years,
+                                                                          long_term_mean)
+
+            # Send data to adjust bias one month
+            result_this_window = util.adjust_bias_one_month(data_this_window, years_this_window,
+                                                            self.params)
+
+            # put central part of bias-adjusted data into result
+            m_ba = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center, 31)
+            m_keep = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center,
+                                                                     self.params.step_size, years['sim_fut'])
+            m_ba_keep = np.in1d(m_ba, m_keep)
+            result.data[m_keep] = result_this_window[m_ba_keep]
+
+        return result
+
+    def month_to_month_mode(self, result, data_loc, month_numbers, years, long_term_mean):
+        """
+        Performs bias adjustment in month-to-month mode
+
+        Parameters
+        ----------
+        result: xr.DataArray
+            Copy of the data to be adjusted (in 1D xarray)
+        data_loc: dict
+            the three data arrays that we need in the specified location
+        month_numbers: dict
+            array of months for each input data array
+        years: dict
+            array of years for each input data array
+        long_term_mean: dict
+            array of means for each input data array
+
+        Returns
+        -------
+        result: x.DataArray
+            1D array containing time series of adjusted values
+        """
+        # Adjust bias for each window center
+        for month in self.params.months:
+            data_this_month, years_this_month = util.get_data_in_month(month, data_loc,
+                                                                       years, month_numbers,
+                                                                       long_term_mean)
+
+            # Send data to adjust bias one month
+            result_this_month = util.adjust_bias_one_month(data_this_month, years_this_month, self.params)
+
+            # put bias-adjusted data into result
+            m = month_numbers['sim_fut'] == month
+            result.data[m] = result_this_month
+
+        return result
+
     def adjust_bias_one_location(self, i_loc, full_details=True):
         """
         Bias adjusts one grid cell
@@ -163,7 +243,7 @@ class Adjustment:
         ----------
         self: Adjustment
             Bias adjustment object
-        i_loc: tuple
+        i_loc: dict
             index of grid cell to bias adjust
         full_details: bool
             Should function return full details of run, or just the time series array
@@ -201,38 +281,21 @@ class Adjustment:
         # Scraping the time from the data and turning into pandas date time array
         days, month_numbers, years = util.time_scraping(self)
 
-        # TODO: Implement option for month-to-month bias adjustment
+        # Result, to be updated as adjustment is made
+        result = sim_fut_loc.copy()
+
         # Get window centers for running window mode
         if self.params.step_size:
             window_centers = util.window_centers_for_running_bias_adjustment(days, self.params.step_size)
+            result = self.running_window_mode(result, window_centers, data_loc, days, years, long_term_mean)
         else:
-            msg = 'Month to month bias adjustment not yet implemented. Set step_size to be non-zero.'
-            raise Exception(msg)
+            result = self.month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean)
 
-        # Result
-        result = sim_fut_loc.copy()
-
-        # TODO: Implement month to month adjustment
-        # Adjust bias for each window center
-        for window_center in window_centers:
-            data_this_window, years_this_window = util.get_data_in_window(window_center, data_loc,
-                                                                          days, years,
-                                                                          long_term_mean)
-
-            # Send data to adjust bias one month
-            result_this_window = util.adjust_bias_one_month(data_this_window, years_this_window,
-                                                            self.params)
-
-            # put central part of bias-adjusted data into result
-            m_ba = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center, 31)
-            m_keep = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center,
-                                                                     self.params.step_size, years['sim_fut'])
-            m_ba_keep = np.in1d(m_ba, m_keep)
-            result.data[m_keep] = result_this_window[m_ba_keep]
-
+        # Return resulting array with extra details if requested
         if full_details:
             return olo.BaLocOutput(result, sim_fut_loc, self.variable, self.params)
 
+        # Return just resulting array if extra details not requested
         return result
 
     def adjust_bias(self, path: str = None):
