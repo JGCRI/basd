@@ -1,6 +1,5 @@
 import numpy as np
 import warnings
-
 import pandas as pd
 from pandas import Series
 import scipy.interpolate as spi
@@ -14,11 +13,6 @@ DISTRIBUTION_PARAMS = {
     'beta': sps.beta,
     'rice': sps.rice
 }
-
-
-# TODO: Implement function for parsing dataset dimensions and attributes
-def analyze_input_nc(dataset, variable):
-    return dataset, variable
 
 
 def ma2a(a, raise_error: bool = False):
