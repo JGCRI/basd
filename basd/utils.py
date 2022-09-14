@@ -111,7 +111,6 @@ def window_centers_for_running_bias_adjustment(days, step_size):
     days_center: np.Array
         Days to center windows around
     """
-    # TODO: Understand this better
     days_max = np.max(days['sim_fut'])
     days_mod = days_max % step_size
     days_center_first = 1 + step_size // 2
@@ -150,7 +149,6 @@ def window_indices_for_running_bias_adjustment(
         Window indices.
 
     """
-    # TODO: Better understand how we index data for running window mode
     i_center = np.where(days == 365)[0] + 1 if window_center == 366 else np.where(days == window_center)[0]
     h = window_width // 2
     if years is None:
@@ -189,6 +187,25 @@ def get_data_in_window(window_center, data_loc, days, years, long_term_mean):
         data_this_window[key] = replaced
 
     return data_this_window, years_this_window
+
+
+def get_data_in_month(month, data_loc, years, month_numbers, long_term_mean):
+    years_this_month = {}
+    data_this_month = {}
+    for key, data_arr in data_loc.items():
+        # Get indices for data needed for this window
+        m = month_numbers[key] == month
+        # Error if no data found for supplied month
+        assert np.any(m), f'No data found for month {month} in {key}'
+        # Associated year for each data point in the resulting data
+        y = years[key]
+        years_this_month[key] = None if y is None else y[m]
+        # Sample invalid values
+        replaced, invalid = sample_invalid_values(data_arr.values[m], 1, long_term_mean[key])
+        # The actual needed data in this window
+        data_this_month[key] = replaced
+
+    return data_this_month, years_this_month
 
 
 def percentile1d(a, p):
@@ -596,7 +613,7 @@ def adjust_bias_one_month(data, years, params):
     # Saving future trend for adding back later
     trend_sim_fut = None
     for key, y in years.items():
-        # TODO: Implement detrending
+        # detrending
         if params.detrend:
             data[key], t = subtract_or_add_trend(data[key], y)
             # Save future trend for adding back later
@@ -613,7 +630,7 @@ def adjust_bias_one_month(data, years, params):
 
     y = map_quantiles_parametric_trend_preserving(data, params)
 
-    # TODO: Implement re-introducing the trend
+    # re-introducing the trend
     if params.detrend:
         y = subtract_or_add_trend(y, years['sim_fut'], trend_sim_fut)
 
