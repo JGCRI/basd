@@ -1,45 +1,159 @@
+import datetime as dt
 import numpy as np
+import xarray as xr
 
 import basd.utils as util
 import basd.one_loc_output as olo
 
 
 class Adjustment:
-    def __init__(self, obs_hist, sim_hist, sim_fut, variable, params):
+    def __init__(self,
+                 obs_hist: xr.Dataset,
+                 sim_hist: xr.Dataset,
+                 sim_fut: xr.Dataset,
+                 variable: str, params):
 
         # Setting the data
-        self.obs_hist = obs_hist
-        self.sim_hist = sim_hist
-        self.sim_fut = sim_fut
-        self.sim_fut_ba = None
+        # Also converting calendar to proleptic_gregorian.
+        # See xarray.convert_calendar() fro details, but default uses date alignment
+        # for 360_day calendars, as this preserves month data for month-to-month mode
+        self.obs_hist = obs_hist.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
+        self.sim_hist = sim_hist.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
+        self.sim_fut = sim_fut.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
         self.variable = variable
         self.params = params
+        self.input_calendar = obs_hist.time.dt.calendar
+        self.datasets = {
+            'obs_hist': self.obs_hist,
+            'sim_hist': self.sim_hist,
+            'sim_fut': self.sim_fut
+        }
 
-        # TODO: Assert that input data has same spatial dimension
-        # coords = util.analyze_input_nc(obs_hist, variable)
+        # Set dimension names to lat, lon, time
+        self.set_dim_names()
 
-        # TODO: Assert full period coverage if using running window mode
+        # Forces data to have same spatial shape and resolution
+        self.assert_consistency_of_data_resolution()
+        self.sizes = self.obs_hist.sizes
+
+        # Assert full period coverage if using running window mode
+        if params.step_size:
+            self.assert_full_period_coverage()
+
         # TODO: Assert uniform number of days between input data
         # TODO: Abort if there are only missing values in any of the data input
         # TODO: Scale data if halfwin_upper_bound_climatology
 
+        # Set up output dataset to have same form as input now that it has been standardized
+        self.sim_fut_ba = self.sim_fut
+
+    def assert_full_period_coverage(self):
+        """
+        Raises an assertion error if years aren't fully covered. Trims data to the first Jan 1st
+        available to the last Dec 31st available.
+        """
+        for key, data in self.datasets.items():
+            # Trim data to start Jan 1 and end Dec 31
+            # Indexes of each Jan 1st and Dec 31st
+            jan_first = data.time.dt.strftime("%m-%d") == '01-01'
+            dec_thirty_first = data.time.dt.strftime("%m-%d") == '12-31'
+            # Index of first Jan 1st and last Dec 31st
+            first = min([i for i, x in enumerate(jan_first) if x])
+            last = max([i for i, x in enumerate(dec_thirty_first) if x])
+            # Indexes to keep
+            keep = [((i <= last) and (i >= first)) for i in range(jan_first.size)]
+            # Selecting data
+            self.datasets[key] = data.sel(time=keep)
+
+        # Updating data
+        self.obs_hist = self.datasets['obs_hist']
+        self.sim_hist = self.datasets['sim_hist']
+        self.sim_fut = self.datasets['sim_fut']
+
+        # Getting updated time info
+        days, month_numbers, years = util.time_scraping(self)
+
+        # Asserting all years are here within range of first and last
+        for key, data in self.datasets.items():
+            # Make sure years array is continuous
+            year_arr = years[key]
+            years_sorted_unique = np.unique(year_arr)
+            ys = years_sorted_unique[0]
+            ye = years_sorted_unique[-1]
+            msg = f'Not all years between {ys} and {ye} are covered in {key}'
+            assert years_sorted_unique.size == ye - ys + 1, msg
+
+            # Getting every day and year that actually happened within our bounds
+            # and making sure those are all present in our arrays
+            day_arr = days[key]
+            years_true = []
+            days_true = []
+            for year in years_sorted_unique:
+                n_days = (dt.date(year + 1, 1, 1) - dt.date(year, 1, 1)).days
+                years_true.append(np.repeat(year, n_days))
+                days_true.append(np.arange(1, n_days + 1))
+            years_true = np.concatenate(years_true)
+            days_true = np.concatenate(days_true)
+
+            year_arr = year_arr.to_numpy()
+            day_arr = day_arr.to_numpy()
+
+            # make sure all days from ys-01-01 to ye-12-31 are covered
+            msg = f'not all days between {ys}-01-01 and {ye}-12-31 are covered in {key}'
+            assert year_arr.size == years_true.size and day_arr.size == days_true.size, msg
+            assert np.all(year_arr == years_true) and np.all(day_arr == days_true), msg
+
+    def set_dim_names(self):
+        """
+        Makes sure latitude, longitude and time dimensions are present. These are set to be named
+        lat, lon, time if not already. Will assume a matching dimension if lat, lon, or time is in
+        the respective dimension name.
+        """
+        # For each of the datasets rename the dimensions
+        for data_name, data in self.datasets.items():
+            for key in data.dims:
+                if 'lat' in key.lower():
+                    self.datasets[data_name] = data.swap_dims({key: 'lat'})
+                elif 'lon' in key.lower():
+                    self.datasets[data_name] = data.swap_dims({key: 'lon'})
+                elif 'time' in key.lower():
+                    self.datasets[data_name] = data.swap_dims({key: 'time'})
+
+        # Make sure each required dimension is in each dataset
+        for data_name, data in self.datasets.items():
+            msg = f'{data_name} needs a latitude, longitude and time dimension'
+            assert all(i in data.dims for i in ['lat', 'lon', 'time']), msg
+
+        # Save the datasets with updated dimension labels
+        self.obs_hist = self.datasets['obs_hist']
+        self.sim_hist = self.datasets['sim_hist']
+        self.sim_fut = self.datasets['sim_fut']
+
     def assert_consistency_of_data_resolution(self):
         """
-        Raises an assertion error if any of the input data are not of the same resolution
+        Raises an assertion error if data are not of the same shape or cannot be aggregated to
+        the same resolution. Otherwise, it will force data to have same spatial resolution via
+        aggregation.
         """
-        # TODO: maybe relax this assertion so that they are a multiple, and aggregate to correct resolution
+        # Get the most coarse dimensions
+        min_lat = min([self.obs_hist.sizes.get('lat'), self.sim_hist.sizes.get('lat'), self.sim_fut.sizes.get('lat')])
+        min_lon = min([self.obs_hist.sizes.get('lon'), self.sim_hist.sizes.get('lon'), self.sim_fut.sizes.get('lon')])
 
-        coords = {
-            'obs_hist': util.analyze_input_nc(self.obs_hist, self.variable),
-            'sim_hist': util.analyze_input_nc(self.sim_hist, self.variable),
-            'sim_fut': util.analyze_input_nc(self.sim_fut, self.variable)
-        }
+        # For each dataset, aggregate to the most coarse dataset if possible
+        for key, value in self.datasets.items():
+            agg_lat = value.sizes.get('lat') / min_lat
+            agg_lon = value.sizes.get('lon') / min_lon
+            assert agg_lat == agg_lon, f'Data have differing shapes'
+            assert agg_lat.is_integer(), f'Non-integer aggregation factor for {key}'
+            agg_fact = int(agg_lat)
+            if agg_fact > 1:
+                print(f'Aggregating {key} by a factor of {agg_fact}')
+                self.datasets[key] = value.coarsen(lat=agg_fact).mean().coarsen(lon=agg_fact).mean()
 
-        # TODO: This only works if in the NetCDF file, latitude and longitude are written as 'lat', 'lon'
-        assert coords.get('obs_hist').get('lat').size == coords.get('sim_hist').get('lat').size == coords.get(
-            'sim_fut').get('lat').size
-        assert coords.get('obs_hist').get('lon').size == coords.get('sim_hist').get('lon').size == coords.get(
-            'sim_fut').get('lon').size
+        # Save aggregated datasets
+        self.obs_hist = self.datasets['obs_hist']
+        self.sim_hist = self.datasets['sim_hist']
+        self.sim_fut = self.datasets['sim_fut']
 
     def adjust_bias_one_location(self, i_loc, full_details=True):
         """
@@ -114,10 +228,47 @@ class Adjustment:
             m_keep = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center,
                                                                      self.params.step_size, years['sim_fut'])
             m_ba_keep = np.in1d(m_ba, m_keep)
-            # TODO: Why are we saving some of result and some of the input?
             result.data[m_keep] = result_this_window[m_ba_keep]
 
         if full_details:
             return olo.BaLocOutput(result, sim_fut_loc, self.variable, self.params)
 
         return result
+
+    def adjust_bias(self, path: str = None):
+        """
+        Does bias adjustment at every location of input data
+
+        Parameters
+        ----------
+        path: str
+            Path to save NetCDF output. If None, return result but don't create file
+
+        Returns
+        -------
+        sim_fut_ba: DataSet
+            Temporal grid of adjusted observations
+
+        """
+        # Get data resolution
+        # Iterate through each location and adjust bias
+        i_locations = np.ndindex(self.sizes['lat'], self.sizes['lon'])
+        for i_loc in i_locations:
+            ind_dict = dict(lat=i_loc[0], lon=i_loc[1])
+            self.sim_fut_ba[self.variable][ind_dict] = self.adjust_bias_one_location(ind_dict, full_details=False)
+
+        if path:
+            self.save_adjustment_nc(path)
+        else:
+            return self.sim_fut_ba
+
+    def save_adjustment_nc(self, path):
+        """
+        Saves adjusted data to NetCDF file at specific path
+
+        Parameters
+        ----------
+        path: str
+            Location and name of output file
+        """
+        self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
