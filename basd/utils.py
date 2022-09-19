@@ -992,7 +992,7 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
         p_zeroone = np.linspace(0., 1., params.n_quantiles + 1)
         q_source_fit = percentile1d(x_source_map, p_zeroone)
         q_target_fit = percentile1d(x_target_fit, p_zeroone)
-        y[i_source] = map_quantiles_non_parametric_with_constant_extrapolation(x_source_map, q_source_fit, q_target_fit)
+        place, y[i_source], holder = map_quantiles_non_parametric_with_constant_extrapolation(x_source_map, q_source_fit, q_target_fit)
 
         # If doing non-parametric mapping, return here
         return y

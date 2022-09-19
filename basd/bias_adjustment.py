@@ -252,7 +252,7 @@ class Adjustment:
             # Chunk to work on
             chunks = np.ndindex(len(lat_indexes), len(lon_indexes))
 
-            chunked_results = Parallel(n_jobs=n_jobs, backend='loky') \
+            chunked_results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=len(lat_indexes)*len(lon_indexes)) \
                 (delayed(adjust_bias_chunk)(
                     self.obs_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
                     self.sim_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
