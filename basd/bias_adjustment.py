@@ -1,4 +1,5 @@
 import datetime as dt
+from joblib import Parallel, delayed
 import numpy as np
 import xarray as xr
 
@@ -155,86 +156,6 @@ class Adjustment:
         self.sim_hist = self.datasets['sim_hist']
         self.sim_fut = self.datasets['sim_fut']
 
-    def running_window_mode(self, result, window_centers, data_loc, days, years, long_term_mean):
-        """
-        Performs bias adjustment in running window mode
-
-        Parameters
-        ----------
-        result: xr.DataArray
-            Copy of the data to be adjusted (in 1D xarray)
-        window_centers: np.Array
-            List of days to center window around
-        data_loc: dict
-            the three data arrays that we need in the specified location
-        days: dict
-            array of days for each input data array
-        years: dict
-            array of years for each input data array
-        long_term_mean: dict
-            array of means for each input data array
-
-        Returns
-        -------
-        result: x.DataArray
-            1D array containing time series of adjusted values
-        """
-        # Adjust bias for each window center
-        for window_center in window_centers:
-            data_this_window, years_this_window = util.get_data_in_window(window_center, data_loc,
-                                                                          days, years,
-                                                                          long_term_mean)
-
-            # Send data to adjust bias one month
-            result_this_window = util.adjust_bias_one_month(data_this_window, years_this_window,
-                                                            self.params)
-
-            # put central part of bias-adjusted data into result
-            m_ba = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center, 31)
-            m_keep = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center,
-                                                                     self.params.step_size, years['sim_fut'])
-            m_ba_keep = np.in1d(m_ba, m_keep)
-            result.data[m_keep] = result_this_window[m_ba_keep]
-
-        return result
-
-    def month_to_month_mode(self, result, data_loc, month_numbers, years, long_term_mean):
-        """
-        Performs bias adjustment in month-to-month mode
-
-        Parameters
-        ----------
-        result: xr.DataArray
-            Copy of the data to be adjusted (in 1D xarray)
-        data_loc: dict
-            the three data arrays that we need in the specified location
-        month_numbers: dict
-            array of months for each input data array
-        years: dict
-            array of years for each input data array
-        long_term_mean: dict
-            array of means for each input data array
-
-        Returns
-        -------
-        result: x.DataArray
-            1D array containing time series of adjusted values
-        """
-        # Adjust bias for each window center
-        for month in self.params.months:
-            data_this_month, years_this_month = util.get_data_in_month(month, data_loc,
-                                                                       years, month_numbers,
-                                                                       long_term_mean)
-
-            # Send data to adjust bias one month
-            result_this_month = util.adjust_bias_one_month(data_this_month, years_this_month, self.params)
-
-            # put bias-adjusted data into result
-            m = month_numbers['sim_fut'] == month
-            result.data[m] = result_this_month
-
-        return result
-
     def adjust_bias_one_location(self, i_loc, full_details=True):
         """
         Bias adjusts one grid cell
@@ -287,9 +208,9 @@ class Adjustment:
         # Get window centers for running window mode
         if self.params.step_size:
             window_centers = util.window_centers_for_running_bias_adjustment(days, self.params.step_size)
-            result = self.running_window_mode(result, window_centers, data_loc, days, years, long_term_mean)
+            result = running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, self.params)
         else:
-            result = self.month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean)
+            result = month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, self.params)
 
         # Return resulting array with extra details if requested
         if full_details:
@@ -298,14 +219,19 @@ class Adjustment:
         # Return just resulting array if extra details not requested
         return result
 
-    def adjust_bias(self, path: str = None):
+    def adjust_bias(self, lat_chunk_size: int = None, lon_chunk_size: int = None,
+                    n_jobs: int = 1, path: str = None):
         """
         Does bias adjustment at every location of input data
 
         Parameters
         ----------
+        n_jobs: int
+            Number of jobs to request for parallelization
         path: str
             Path to save NetCDF output. If None, return result but don't create file
+        lat_chunk_size: int
+        lon_chunk_size: int
 
         Returns
         -------
@@ -313,13 +239,50 @@ class Adjustment:
             Temporal grid of adjusted observations
 
         """
-        # Get data resolution
-        # Iterate through each location and adjust bias
-        i_locations = np.ndindex(self.sizes['lat'], self.sizes['lon'])
-        for i_loc in i_locations:
-            ind_dict = dict(lat=i_loc[0], lon=i_loc[1])
-            self.sim_fut_ba[self.variable][ind_dict] = self.adjust_bias_one_location(ind_dict, full_details=False)
+        # Get days, months and years data
+        days, month_numbers, years = util.time_scraping(self)
 
+        if lat_chunk_size & lon_chunk_size:
+            # Manual chunk method
+            chunk_sizes = self.obs_hist[self.variable].chunk({'lat': lat_chunk_size, 'lon': lon_chunk_size}).chunksizes
+
+            # Indexes per chunk
+            lat_indexes, lon_indexes = util.chunk_indexes(chunk_sizes)
+
+            # Chunk to work on
+            chunks = np.ndindex(len(lat_indexes), len(lon_indexes))
+
+            chunked_results = Parallel(n_jobs=n_jobs, backend='loky') \
+                (delayed(adjust_bias_chunk)(
+                    self.obs_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
+                    self.sim_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
+                    self.sim_fut[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
+                    self.params,
+                    self.variable,
+                    days,
+                    month_numbers,
+                    years) for chunk in chunks)
+
+            self.sim_fut_ba = xr.combine_by_coords(chunked_results)
+
+        else:
+            # Iterate through each location and adjust bias
+            i_locations = np.ndindex(self.sizes['lat'], self.sizes['lon'])
+
+            # Find and save results into adjusted DataSet
+            for i, i_loc in enumerate(i_locations):
+                result = adjust_bias_one_location_parallel(
+                    self.obs_hist[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
+                    self.sim_hist[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
+                    self.sim_fut[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
+                    self.params,
+                    days,
+                    month_numbers,
+                    years)
+                self.sim_fut_ba[self.variable][dict(lat=i_loc[0], lon=i_loc[1])] = result
+
+        # If provided a path to save NetCDF file, save adjusted DataSet,
+        # else just return the result
         if path:
             self.save_adjustment_nc(path)
         else:
@@ -335,3 +298,166 @@ class Adjustment:
             Location and name of output file
         """
         self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
+
+
+def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
+    """
+    Performs bias adjustment in running window mode
+
+    Parameters
+    ----------
+    result: xr.DataArray
+        Copy of the data to be adjusted (in 1D xarray)
+    window_centers: np.Array
+        List of days to center window around
+    data_loc: dict
+        the three data arrays that we need in the specified location
+    days: dict
+        array of days for each input data array
+    years: dict
+        array of years for each input data array
+    long_term_mean: dict
+        array of means for each input data array
+    params: Parameters
+        object that holds parameters for bias adjustment
+
+    Returns
+    -------
+    result: x.DataArray
+        1D array containing time series of adjusted values
+    """
+    # Adjust bias for each window center
+    for window_center in window_centers:
+        data_this_window, years_this_window = util.get_data_in_window(window_center, data_loc,
+                                                                      days, years,
+                                                                      long_term_mean)
+
+        # Send data to adjust bias one month
+        result_this_window = util.adjust_bias_one_month(data_this_window, years_this_window,
+                                                        params)
+
+        # put central part of bias-adjusted data into result
+        m_ba = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center, 31)
+        m_keep = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center,
+                                                                 params.step_size, years['sim_fut'])
+        m_ba_keep = np.in1d(m_ba, m_keep)
+        result.data[m_keep] = result_this_window[m_ba_keep]
+
+    return result
+
+
+def month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, params):
+    """
+    Performs bias adjustment in month-to-month mode
+
+    Parameters
+    ----------
+    result: xr.DataArray
+        Copy of the data to be adjusted (in 1D xarray)
+    data_loc: dict
+        the three data arrays that we need in the specified location
+    month_numbers: dict
+        array of months for each input data array
+    years: dict
+        array of years for each input data array
+    long_term_mean: dict
+        array of means for each input data array
+    params: Parameters
+        object that holds parameters for bias adjustment
+
+    Returns
+    -------
+    result: x.DataArray
+        1D array containing time series of adjusted values
+    """
+    # Adjust bias for each window center
+    for month in params.months:
+        data_this_month, years_this_month = util.get_data_in_month(month, data_loc,
+                                                                   years, month_numbers,
+                                                                   long_term_mean)
+
+        # Send data to adjust bias one month
+        result_this_month = util.adjust_bias_one_month(data_this_month, years_this_month, params)
+
+        # put bias-adjusted data into result
+        m = month_numbers['sim_fut'] == month
+        result.data[m] = result_this_month
+
+    return result
+
+
+def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
+                                      params,
+                                      days, month_numbers, years):
+    """
+    Bias adjusts one grid cell
+
+    Parameters
+    ----------
+    obs_hist_loc: xarray.DataArray
+    sim_hist_loc: xarray.DataArray
+    sim_fut_loc: xarray.DataArray
+    params: Parameters
+    days: dict
+    month_numbers: dict
+    years: dict
+
+    Returns
+    -------
+    sim_fut_ba_loc: xarray.DataArray
+        adjusted time series with times, lat and lon
+    """
+    # Put in dictionary for easy iteration
+    data_loc = {
+        'obs_hist': obs_hist_loc,
+        'sim_hist': sim_hist_loc,
+        'sim_fut': sim_fut_loc
+    }
+
+    # Get long term mean over each time series using valid values
+    long_term_mean = {
+        'obs_hist': util.average_valid_values(obs_hist_loc.values, np.nan,
+                                              params.lower_bound, params.lower_threshold,
+                                              params.upper_bound, params.upper_threshold),
+        'sim_hist': util.average_valid_values(sim_hist_loc.values, np.nan,
+                                              params.lower_bound, params.lower_threshold,
+                                              params.upper_bound, params.upper_threshold),
+        'sim_fut': util.average_valid_values(sim_fut_loc.values, np.nan,
+                                             params.lower_bound, params.lower_threshold,
+                                             params.upper_bound, params.upper_threshold)
+    }
+
+    # Result, to be updated as adjustment is made
+    result = sim_fut_loc.copy()
+
+    # Get window centers for running window mode
+    if params.step_size:
+        window_centers = util.window_centers_for_running_bias_adjustment(days, params.step_size)
+        result = running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params)
+    else:
+        result = month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, params)
+
+    # Return just resulting array if extra details not requested
+    return result
+
+
+def adjust_bias_chunk(obs_hist, sim_hist, sim_fut, params, variable, days, month_numbers, years):
+    # Iterate through each location and adjust bias
+    i_locations = np.ndindex(obs_hist.sizes['lat'], obs_hist.sizes['lon'])
+
+    # Unadjusted results of correct shape
+    sim_fut_ba = xr.Dataset({variable: sim_fut})
+
+    # Find and save results into adjusted DataSet
+    for i, i_loc in enumerate(i_locations):
+        result = adjust_bias_one_location_parallel(
+            obs_hist[dict(lat=i_loc[0], lon=i_loc[1])],
+            sim_hist[dict(lat=i_loc[0], lon=i_loc[1])],
+            sim_fut[dict(lat=i_loc[0], lon=i_loc[1])],
+            params,
+            days,
+            month_numbers,
+            years)
+        sim_fut_ba[variable][dict(lat=i_loc[0], lon=i_loc[1])] = result
+
+    return sim_fut_ba
