@@ -236,6 +236,23 @@ def percentile1d(a, p):
     return b[i_below] * (1. - w_above) + b[i_below + (i_below < n)] * w_above
 
 
+def chunk_indexes(chunk_sizes):
+    all_lat_indexes = np.arange(sum(chunk_sizes['lat']))
+    all_lon_indexes = np.arange(sum(chunk_sizes['lon']))
+    lat_indexes = {}
+    lon_indexes = {}
+    cum_sum = 0
+    for i, size in enumerate(chunk_sizes['lat']):
+        lat_indexes[i] = all_lat_indexes[np.arange(size) + cum_sum]
+        cum_sum += size
+    cum_sum = 0
+    for i, size in enumerate(chunk_sizes['lon']):
+        lon_indexes[i] = all_lon_indexes[np.arange(size) + cum_sum]
+        cum_sum += size
+
+    return lat_indexes, lon_indexes
+
+
 def time_scraping(adjustment):
     """
     Function that turns the time variables for each input dataset into arrays
