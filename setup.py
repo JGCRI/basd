@@ -25,6 +25,8 @@ setup(
     python_requires='>=3.8.*, <4',
     include_package_data=True,
     install_requires=[
+        "dask",
+        "joblib",
         "matplotlib",
         "numpy>=1.23",
         "PyYAML>=6",

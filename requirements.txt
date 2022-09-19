@@ -1,3 +1,5 @@
+dask
+joblib
 matplotlib
 netCDF4
 numpy>=1.23
