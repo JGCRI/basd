@@ -932,7 +932,36 @@ def map_quantiles_non_parametric_brute_force(x, y):
 
 
 def map_quantiles_non_parametric_with_constant_extrapolation(x, q_sim, q_obs):
-    return x, q_sim, q_obs
+    """
+    Uses quantile-quantile pairs represented by values in q_sim and q_obs
+    for quantile mapping of x.
+
+    Values in x beyond the range of q_sim are mapped following the constant
+    extrapolation approach, see Boe et al. (2007)
+    <https://doi.org/10.1002/joc.1602>.
+
+    Parameters
+    ----------
+    x : np.Array
+        Simulated time series.
+    q_sim : np.Array
+        Simulated quantiles.
+    q_obs : np.Array
+        Observed quantiles.
+
+    Returns
+    -------
+    y : np.Array
+        Result of quantile mapping.
+
+    """
+    assert q_sim.size == q_obs.size
+    ind_under = x < q_sim[0]
+    ind_over = x > q_sim[-1]
+    y = np.interp(x, q_sim, q_obs)
+    y[ind_under] = x[ind_under] + (q_obs[0] - q_sim[0])
+    y[ind_over] = x[ind_over] + (q_obs[-1] - q_sim[-1])
+    return y
 
 
 def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, params):
@@ -992,7 +1021,9 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
         p_zeroone = np.linspace(0., 1., params.n_quantiles + 1)
         q_source_fit = percentile1d(x_source_map, p_zeroone)
         q_target_fit = percentile1d(x_target_fit, p_zeroone)
-        place, y[i_source], holder = map_quantiles_non_parametric_with_constant_extrapolation(x_source_map, q_source_fit, q_target_fit)
+        place, y[i_source], holder = map_quantiles_non_parametric_with_constant_extrapolation(x_source_map,
+                                                                                              q_source_fit,
+                                                                                              q_target_fit)
 
         # If doing non-parametric mapping, return here
         return y
