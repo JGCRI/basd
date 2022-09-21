@@ -3,7 +3,7 @@ import numpy as np
 
 class Parameters:
     # TODO: Include each parameter in docstring
-    def __init__(self, step_size=1, distribution=None, months=None,
+    def __init__(self, step_size=1, distribution=None, months=None, output_calendar=None,
                  lower_bound=None, lower_threshold=None, upper_bound=None, upper_threshold=None,
                  n_iterations=0, halfwin_ubc=0, trend_preservation='additive', n_quantiles=50,
                  p_value_eps=1.e-10, max_change_factor=100., max_adjustment_factor=9.,
@@ -53,6 +53,7 @@ class Parameters:
         """
         # Setting the parameters for the adjustment
         self.step_size = step_size
+        self.output_calendar = output_calendar
         self.months = months if not step_size else [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         self.distribution = distribution
         self.trendless_bound_frequency = trendless_bound_frequency
