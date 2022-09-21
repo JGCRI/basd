@@ -334,4 +334,9 @@ class Adjustment:
         path: str
             Location and name of output file
         """
-        self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
+        # If user specified output calendar, convert and save as specified
+        if self.params.output_calendar:
+            self.sim_fut_ba.convert_calendar(self.params.output_calendar, align_on='date').to_netcdf(path)
+        # Else convert to calendar type of the input data
+        else:
+            self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
