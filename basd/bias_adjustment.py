@@ -156,6 +156,9 @@ class Adjustment:
         self.sim_hist = self.datasets['sim_hist']
         self.sim_fut = self.datasets['sim_fut']
 
+    def abol_vec(self, i_loc):
+        return self.adjust_bias_one_location(dict(lat=i_loc[0], lon=i_loc[1]))
+
     def adjust_bias_one_location(self, i_loc, full_details=True):
         """
         Bias adjusts one grid cell
@@ -219,7 +222,7 @@ class Adjustment:
         # Return just resulting array if extra details not requested
         return result
 
-    def adjust_bias(self, lat_chunk_size: int = None, lon_chunk_size: int = None,
+    def adjust_bias(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
                     n_jobs: int = 1, path: str = None):
         """
         Does bias adjustment at every location of input data
@@ -252,7 +255,7 @@ class Adjustment:
             # Chunk to work on
             chunks = np.ndindex(len(lat_indexes), len(lon_indexes))
 
-            chunked_results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=len(lat_indexes)*len(lon_indexes)) \
+            chunked_results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10) \
                 (delayed(adjust_bias_chunk)(
                     self.obs_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
                     self.sim_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
@@ -394,9 +397,9 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
 
     Parameters
     ----------
-    obs_hist_loc: xarray.DataArray
-    sim_hist_loc: xarray.DataArray
-    sim_fut_loc: xarray.DataArray
+    obs_hist_loc: xr.DataArray
+    sim_hist_loc: xr.DataArray
+    sim_fut_loc: xr.DataArray
     params: Parameters
     days: dict
     month_numbers: dict
