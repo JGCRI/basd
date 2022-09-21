@@ -960,7 +960,7 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
 
         # Fit distributions to x_source and x_target
         shape_loc_scale_source = fit(spsdotwhat, x_source_fit, fwords)
-        shape_loc_scale_target = fit(spsdotwhat, x_source_fit, fwords)
+        shape_loc_scale_target = fit(spsdotwhat, x_target_fit, fwords)
 
         # This just uses MLE without fixing scale/location parameters ever
         # shape_loc_scale_source = spsdotwhat.fit(x_source_fit)
