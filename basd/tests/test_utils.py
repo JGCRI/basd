@@ -129,6 +129,13 @@ class TestUtils(unittest.TestCase):
         assert put is None
         assert plout is None
 
+    def test_aggregate_periodic(self):
+        # [0, 1, 2, 3, 4]
+        simple_array = np.arange(5)
+        halfwin = 1
+        simple_out = util.aggregate_periodic(simple_array, halfwin, 'max')
+        print(f'{simple_array} --> {simple_out}')
+
 
 if __name__ == '__main__':
     unittest.main()
