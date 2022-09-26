@@ -4,6 +4,7 @@ import pandas as pd
 from pandas import Series
 import scipy.interpolate as spi
 import scipy.stats as sps
+from scipy.signal import convolve
 
 # Dictionary of possible distribution params implemented thus far
 DISTRIBUTION_PARAMS = {
@@ -40,6 +41,125 @@ def ma2a(a, raise_error: bool = False):
             return b.filled(np.nan)
     else:
         return b.data
+
+
+def aggregate_periodic(arr, halfwin, aggregator='mean'):
+    """
+    Aggregates arr using the given aggregator and a running window of length
+    2 * halfwin + 1 assuming that arr is periodic.
+
+    Parameters
+    ----------
+    arr : np.Array
+        Array to be aggregated.
+    halfwin : int
+        Determines length of running window used for aggregation.
+    aggregator : str, optional
+        Determines how arr is aggregated along axis 0 for every running window.
+
+    Returns
+    -------
+    rm : ndarray
+        Result of aggregation. Same shape as arr.
+
+    """
+    # Window should be positive length
+    assert halfwin >= 0, 'halfwin < 0'
+    if not halfwin:
+        return arr
+
+    # Extend a periodically
+    # Size of the array
+    n = arr.size
+    # Making sure window contained within array
+    assert n >= halfwin, 'length of a along axis 0 less than halfwin'
+    # Wrapping array
+    b = np.concatenate((arr[-halfwin:], arr, arr[:halfwin]))
+
+    # Full window width
+    window = 2 * halfwin + 1
+
+    # Aggregate using algorithm for max inspired by
+    # <http://p-nand-q.com/python/algorithms/searching/max-sliding-window.html>
+    if aggregator == 'max':
+        c = list(np.maximum.accumulate(b[:window][::-1]))
+        rm = np.empty_like(arr)
+        rm[0] = c[-1]
+        for i in range(n-1):
+            c_new = b[i+window]
+            del c[-1]
+            for j in range(window-1):
+                if c_new > c[j]:
+                    c[j] = c_new
+                else:
+                    break
+            c.insert(0, c_new)
+            rm[i+1] = c[-1]
+    elif aggregator == 'mean':
+        rm = convolve(b, np.repeat(1./window, window), 'valid')
+    else:
+        raise ValueError(f'aggregator {aggregator} not supported')
+
+    return rm
+
+
+def get_upper_bound_climatology(d, doys, halfwin):
+    """
+    Estimates an annual cycle of upper bounds as running mean values of running
+    maximum values of multi-year daily maximum values.
+
+    Parameters
+    ----------
+    d : array
+        Time series for which annual cycles of upper bounds shall be estimated.
+    doys : array
+        Day of the year time series corresponding to d.
+    halfwin : int
+        Determines length of running windows used for estimation.
+
+    Returns
+    -------
+    ubc : array
+        Upper bound climatology.
+    doys_unique : array
+        Days of the year of upper bound climatology.
+
+    """
+    assert d.shape == doys.shape, 'd and doys differ in shape'
+
+    # check length of time axis of resulting array
+    doys_unique, counts = np.unique(doys, return_counts=True)
+    n = doys_unique.size
+    if n != 366:
+        msg = (f'upper bound climatology only defined for {n} days of the year:'
+                ' this may imply an invalid computation of the climatology')
+        warnings.warn(msg)
+
+    # compute multi year daily maximum
+    d_sorted = d[np.argsort(doys)]
+    mydm = np.empty(n, dtype=d.dtype)
+    if np.unique(counts[:-1]).size == 1:
+        # fast version which applies in the usual case
+        if counts[0] == counts[-1]:
+            d_stacked = d_sorted.reshape(n, counts[0])
+            mydm = np.max(d_stacked, axis=1)
+        else:
+            mydm[-1] =  np.max(d_sorted[-counts[-1]:])
+            d_stacked = d_sorted[:-counts[-1]].reshape(n-1, counts[0])
+            mydm[:-1] = np.max(d_stacked, axis=1)
+    else:
+        # slow version which always works
+        j = 0
+        for i in range(n):
+            k = j + counts[i]
+            mydm[i] = np.max(d_sorted[j:k])
+            j = k
+
+    # smooth multi year daily maximum
+    mydmrm = aggregate_periodic(mydm, halfwin, aggregator='max')
+    ubc = aggregate_periodic(mydmrm, halfwin, aggregator='mean')
+
+    return ubc, doys_unique
 
 
 def average_valid_values(a, if_all_invalid_use=np.nan,
