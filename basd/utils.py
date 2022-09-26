@@ -1006,7 +1006,7 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
 
         # Fit distributions to x_source and x_target
         shape_loc_scale_source = fit(spsdotwhat, x_source_fit, fwords)
-        shape_loc_scale_target = fit(spsdotwhat, x_source_fit, fwords)
+        shape_loc_scale_target = fit(spsdotwhat, x_target_fit, fwords)
 
         # This just uses MLE without fixing scale/location parameters ever
         # shape_loc_scale_source = spsdotwhat.fit(x_source_fit)
@@ -1021,9 +1021,7 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
         p_zeroone = np.linspace(0., 1., params.n_quantiles + 1)
         q_source_fit = percentile1d(x_source_map, p_zeroone)
         q_target_fit = percentile1d(x_target_fit, p_zeroone)
-        place, y[i_source], holder = map_quantiles_non_parametric_with_constant_extrapolation(x_source_map,
-                                                                                              q_source_fit,
-                                                                                              q_target_fit)
+        y[i_source] = map_quantiles_non_parametric_with_constant_extrapolation(x_source_map, q_source_fit, q_target_fit)
 
         # If doing non-parametric mapping, return here
         return y
