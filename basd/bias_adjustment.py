@@ -273,16 +273,18 @@ class Adjustment:
             i_locations = np.ndindex(self.sizes['lat'], self.sizes['lon'])
 
             # Find and save results into adjusted DataSet
-            for i, i_loc in enumerate(i_locations):
-                result = adjust_bias_one_location_parallel(
+            results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10) \
+                (delayed(adjust_bias_one_location_parallel)(
                     self.obs_hist[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
                     self.sim_hist[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
                     self.sim_fut[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
                     self.params,
                     days,
                     month_numbers,
-                    years)
-                self.sim_fut_ba[self.variable][dict(lat=i_loc[0], lon=i_loc[1])] = result
+                    years) for i_loc in i_locations)
+
+            for i, i_loc in enumerate(i_locations):
+                self.sim_fut_ba[self.variable][dict(lat=i_loc[0], lon=i_loc[1])] = results[i]
 
         # If provided a path to save NetCDF file, save adjusted DataSet,
         # else just return the result
