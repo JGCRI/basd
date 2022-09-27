@@ -182,12 +182,35 @@ class Adjustment:
         sim_hist_loc = self.sim_hist[self.variable][i_loc]
         sim_fut_loc = self.sim_fut[self.variable][i_loc]
 
+        # Scraping the time from the data and turning into pandas date time array
+        days, month_numbers, years = util.time_scraping(self)
+
         # Put in dictionary for easy iteration
         data_loc = {
             'obs_hist': obs_hist_loc,
             'sim_hist': sim_hist_loc,
             'sim_fut': sim_fut_loc
         }
+
+        # If scaling using climatology, get upper bound for scaling
+        ubc_ba = None
+        ubcs = None
+        if self.params.halfwin_ubc:
+            ubcs = {
+                'obs_hist': util.get_upper_bound_climatology(obs_hist_loc,
+                                                             days['obs_hist'],
+                                                             self.params.halfwin_ubc),
+                'sim_hist': util.get_upper_bound_climatology(sim_hist_loc,
+                                                             days['sim_hist'],
+                                                             self.params.halfwin_ubc),
+                'sim_fut': util.get_upper_bound_climatology(sim_fut_loc,
+                                                            days['sim_fut'],
+                                                            self.params.halfwin_ubc)
+            }
+            for key, value in data_loc.items():
+                data_loc[key].values = util.scale_by_upper_bound_climatology(value, ubcs[key], divide=True)
+
+            ubc_ba = util.ccs_transfer_sim2obs_upper_bound_climatology(ubcs, days)
 
         # Get long term mean over each time series using valid values
         long_term_mean = {
@@ -202,9 +225,6 @@ class Adjustment:
                                                  self.params.upper_bound, self.params.upper_threshold)
         }
 
-        # Scraping the time from the data and turning into pandas date time array
-        days, month_numbers, years = util.time_scraping(self)
-
         # Result, to be updated as adjustment is made
         result = sim_fut_loc.copy()
 
@@ -214,6 +234,11 @@ class Adjustment:
             result = running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, self.params)
         else:
             result = month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, self.params)
+
+        # If we scaled variable before, time to scale back
+        if self.params.halfwin_ubc:
+            result.values = util.scale_by_upper_bound_climatology(result, ubc_ba, divide=False)
+            sim_fut_loc.values = util.scale_by_upper_bound_climatology(sim_fut_loc, ubcs['sim_fut'], divide=False)
 
         # Return resulting array with extra details if requested
         if full_details:
@@ -419,6 +444,25 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
         'sim_fut': sim_fut_loc
     }
 
+    # If scaling using climatology, get upper bound for scaling
+    ubc_ba = None
+    if params.halfwin_ubc:
+        ubcs = {
+            'obs_hist': util.get_upper_bound_climatology(obs_hist_loc,
+                                                         days['obs_hist'],
+                                                         params.halfwin_ubc),
+            'sim_hist': util.get_upper_bound_climatology(sim_hist_loc,
+                                                         days['sim_hist'],
+                                                         params.halfwin_ubc),
+            'sim_fut': util.get_upper_bound_climatology(sim_fut_loc,
+                                                        days['sim_fut'],
+                                                        params.halfwin_ubc)
+        }
+        for key, value in data_loc.items():
+            data_loc[key].values = util.scale_by_upper_bound_climatology(value, ubcs[key], divide=True)
+
+        ubc_ba = util.ccs_transfer_sim2obs_upper_bound_climatology(ubcs, days)
+
     # Get long term mean over each time series using valid values
     long_term_mean = {
         'obs_hist': util.average_valid_values(obs_hist_loc.values, np.nan,
@@ -441,6 +485,10 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
         result = running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params)
     else:
         result = month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, params)
+
+    # If we scaled variable before, time to scale back
+    if params.halfwin_ubc:
+        result.values = util.scale_by_upper_bound_climatology(result, ubc_ba, divide=False)
 
     # Return just resulting array if extra details not requested
     return result

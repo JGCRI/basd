@@ -4,6 +4,7 @@ import pandas as pd
 from pandas import Series
 import scipy.interpolate as spi
 import scipy.stats as sps
+from scipy.signal import convolve
 
 # Dictionary of possible distribution params implemented thus far
 DISTRIBUTION_PARAMS = {
@@ -40,6 +41,205 @@ def ma2a(a, raise_error: bool = False):
             return b.filled(np.nan)
     else:
         return b.data
+
+
+def aggregate_periodic(arr, halfwin, aggregator='mean'):
+    """
+    Aggregates arr using the given aggregator and a running window of length
+    2 * halfwin + 1 assuming that arr is periodic.
+
+    Parameters
+    ----------
+    arr : np.Array
+        Array to be aggregated.
+    halfwin : int
+        Determines length of running window used for aggregation.
+    aggregator : str, optional
+        Determines how arr is aggregated along axis 0 for every running window.
+
+    Returns
+    -------
+    rm : np.ndarray
+        Result of aggregation. Same shape as arr.
+
+    """
+    # Window should be positive length
+    assert halfwin >= 0, 'halfwin < 0'
+    if not halfwin:
+        return arr
+
+    # Extend a periodically
+    # Size of the array
+    n = arr.size
+    # Making sure window contained within array
+    assert n >= halfwin, 'length of a along axis 0 less than halfwin'
+    # Wrapping array
+    b = np.concatenate((arr[-halfwin:], arr, arr[:halfwin]))
+
+    # Full window width
+    window = 2 * halfwin + 1
+
+    # Aggregate using algorithm for max inspired by
+    # <http://p-nand-q.com/python/algorithms/searching/max-sliding-window.html>
+    if aggregator == 'max':
+        c = list(np.maximum.accumulate(b[:window][::-1]))
+        rm = np.empty_like(arr)
+        rm[0] = c[-1]
+        for i in range(n - 1):
+            c_new = b[i + window]
+            del c[-1]
+            for j in range(window - 1):
+                if c_new > c[j]:
+                    c[j] = c_new
+                else:
+                    break
+            c.insert(0, c_new)
+            rm[i + 1] = c[-1]
+    elif aggregator == 'mean':
+        rm = convolve(b, np.repeat(1. / window, window), 'valid')
+    else:
+        raise ValueError(f'aggregator {aggregator} not supported')
+
+    return rm
+
+
+def get_upper_bound_climatology(data_arr, days, halfwin):
+    """
+    Estimates an annual cycle of upper bounds as running mean values of running
+    maximum values of multi-year daily maximum values.
+
+    Parameters
+    ----------
+    data_arr: np.Array
+        Time series for which annual cycles of upper bounds shall be estimated.
+    days: np.Array
+        Day of the year time series corresponding to d.
+    halfwin: int
+        Determines length of running windows used for estimation.
+
+    Returns
+    -------
+    ubc: np.Array
+        Upper bound climatology.
+    days_unique: np.Array
+        Days of the year of upper bound climatology.
+    """
+    # Each data obs must have associated day of the year, thus shapes must be the same
+    assert data_arr.shape == days.shape, 'data and days differ in shape'
+
+    # Get the unique days of the year in order
+    unique_days = np.sort(np.unique(days))
+
+    # Warn user if number of unique days is less than 366
+    n = unique_days.size
+    if n != 366:
+        msg = (f'Upper bound climatology only defined for {n} days of the year:'
+               ' this may imply an invalid computation of the climatology')
+        warnings.warn(msg)
+
+    # The max value in the data for each day of the year
+    daily_max = np.empty(unique_days.size, data_arr.dtype)
+    for i, day in enumerate(unique_days):
+        daily_max[i] = np.max(data_arr[days == day])
+
+    # Moving window max
+    moving_window_max = aggregate_periodic(daily_max, halfwin, 'max')
+    # Moving window mean
+    moving_window_max_mean = aggregate_periodic(moving_window_max, halfwin)
+
+    # Smooth ubc
+    ubc = data_arr.copy()
+    for day in unique_days:
+        ubc[days == day] = moving_window_max_mean[unique_days == day]
+
+    return ubc
+
+
+def scale_by_upper_bound_climatology(data_arr, ubc, divide=True):
+    """
+    Scales all values in d using the annual cycle of upper bounds.
+
+    Parameters
+    ----------
+    data_arr: np.Array
+        Time series to be scaled. Is changed in-place.
+    ubc: np.Array
+        Upper bound climatology used for scaling.
+    divide: boolean, optional
+        If True then d is divided by upper_bound_climatology, otherwise they
+        are multiplied.
+
+    Returns
+    -------
+    new_arr: np.Array
+        Time series array scaled to the upper bound climatology
+    """
+    # For each data observation we should have smooth ubc corresponding value
+    assert data_arr.shape == ubc.shape, 'Data and ubc shapes differ'
+
+    # If we are scaling to [0, 1]
+    if divide:
+        # Careful not to divide by zero. When upper bound is zero, set data to zero
+        # (this is rather irrelevant, but only way ubc is zero is if data is zero there anyway)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            new_arr = np.where(ubc == 0, 0, data_arr / ubc)
+        # Make values within range
+        new_arr[new_arr > 1] = 1
+        new_arr[new_arr < 0] = 0
+
+    # If we are scaling back from [0, 1]
+    else:
+        new_arr = data_arr * ubc
+        # Make sure values don't exceed ubc
+        new_arr[new_arr > ubc] = ubc[new_arr > ubc]
+
+    return new_arr
+
+
+def ccs_transfer_sim2obs_upper_bound_climatology(ubcs, days):
+    """
+    Transfers climatology trend observed in the simulated data to the observed data.
+
+    Parameters
+    ----------
+    ubcs: dict
+        np.Arrays of the upper bounds for each day in each time series
+    days: dict
+        np.Arrays with the day of year for each data point in each array
+
+    Returns
+    -------
+    sim_fut_ba: np.Array
+        Upper bound for the future bias adjusted data
+    """
+    # Must have the same coverage of days
+    msg = f'Not all input data covers the same days. Check the calendar and/or missing values'
+    assert np.all(np.unique(days['obs_hist']) == np.unique(days['sim_hist'])), msg
+    assert np.all(np.unique(days['obs_hist']) == np.unique(days['sim_fut'])), msg
+
+    # Data
+    obs_hist = ubcs['obs_hist']
+    sim_hist = ubcs['sim_hist']
+    sim_fut = ubcs['sim_fut']
+
+    # Unadjusted output of correct shape
+    sim_fut_ba = sim_fut.copy()
+
+    # For each day, find the ubc for adjustment. Should have same shape as sim_fut
+    for day in np.unique(days['obs_hist']):
+        with np.errstate(divide='ignore', invalid='ignore'):
+            # Get the ubc for the given day in each time series
+            # Just need the value so take the first one
+            ubc_sim_hist = sim_hist[days['sim_hist'] == day][0]
+            ubc_sim_fut = sim_fut[days['sim_fut'] == day][0]
+            ubc_obs_hist = obs_hist[days['obs_hist'] == day][0]
+            # Calc the change factor
+            change_factor = np.where(ubc_sim_hist == 0, 1, ubc_sim_fut / ubc_sim_hist)
+            change_factor = np.maximum(0.1, np.minimum(10, change_factor))
+            # Scale obs_hist by the change factor and save it into the correct spot in sim_fut_ba
+            sim_fut_ba[days['sim_fut'] == day] = change_factor * ubc_obs_hist
+
+    return sim_fut_ba
 
 
 def average_valid_values(a, if_all_invalid_use=np.nan,
@@ -1031,7 +1231,7 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
     # fit for the simulated future values
     p_source = spsdotwhat.cdf(x_source_map, *shape_loc_scale_source)
     # Limiting the p-values to not be too small or close to 1
-    p_source = np.maximum(params.p_value_eps, np.minimum(1-params.p_value_eps, p_source))
+    p_source = np.maximum(params.p_value_eps, np.minimum(1 - params.p_value_eps, p_source))
 
     # Compute target p-values
     if params.adjust_p_values:
@@ -1080,7 +1280,7 @@ def check_shape_loc_scale(spsdotwhat, shape_loc_scale):
     # Bounds for bet distribution
     elif spsdotwhat == sps.beta:
         return 2 if shape_loc_scale[0] <= 0 or shape_loc_scale[1] <= 0 \
-            or shape_loc_scale[0] > 1e10 or shape_loc_scale[1] > 1e10 else 0
+                    or shape_loc_scale[0] > 1e10 or shape_loc_scale[1] > 1e10 else 0
     else:
         return 3
 

@@ -129,6 +129,76 @@ class TestUtils(unittest.TestCase):
         assert put is None
         assert plout is None
 
+    def test_aggregate_periodic(self):
+        # [0, 1, 2, 3, 4]
+        simple_array = np.arange(5)
+        # Take window to include one entry on either side of center
+        halfwin = 1
+
+        # Taking the max of a running window of size 3, that wraps,
+        # [4, 2, 3, 4, 4]
+        simple_max = util.aggregate_periodic(simple_array, halfwin, 'max')
+        np.testing.assert_array_equal(simple_max,
+                                      np.array([4, 2, 3, 4, 4]))
+
+        # Taking the mean of a running window of size 3, that wraps,
+        # [5/3, 1, 2, 3, 7/3]
+        simple_mean = util.aggregate_periodic(simple_array, halfwin)
+        np.testing.assert_array_almost_equal(simple_mean,
+                                             np.array([5/3, 1, 2, 3, 7/3]))
+
+        # NA values
+        # The middle three aggregated values will now be nan
+        # [0, 1, nan, 3, 3]
+        na_array = np.array([0, 1, np.nan, 3, 3])
+        na_mean = util.aggregate_periodic(na_array, halfwin)
+        np.testing.assert_array_almost_equal(na_mean,
+                                             np.array([4/3, np.nan, np.nan, np.nan, 2]))
+
+        # Invalid aggregation method raises value error
+        self.assertRaises(ValueError, util.aggregate_periodic,
+                          simple_array, halfwin, 'mode')
+
+    def test_get_upper_bound_climatology(self):
+        # Number of years in our data
+        n_years = 2
+        # Data array
+        data_arr = np.random.uniform(0, 1, 366 * n_years)
+        # Day of the year
+        days = np.repeat(np.arange(366) + 1, n_years)
+        # Half window size
+        halfwin = 15
+
+        # Get upper bounds
+        ubcs = util.get_upper_bound_climatology(data_arr, days, halfwin)
+
+        # Assert that shapes are the same for now, can figure out better tests later
+        assert ubcs.shape == data_arr.shape
+
+    def test_ccs_transfer_sim2obs_upper_bound_climatology(self):
+        # Number of years in our data
+        n_years = 2
+
+        # Data arrays
+        data_dict = {
+            'obs_hist': np.random.uniform(0, 1, 366 * n_years),
+            'sim_hist': np.random.uniform(0, 1, 366 * n_years),
+            'sim_fut': np.random.uniform(0, 1, 366 * (1+n_years))
+        }
+
+        # Associated days
+        days = {
+            'obs_hist': np.repeat(np.arange(366) + 1, n_years),
+            'sim_hist': np.repeat(np.arange(366) + 1, n_years),
+            'sim_fut': np.repeat(np.arange(366) + 1, (1+n_years))
+        }
+
+        # Transfer climatology trend
+        sim_fut_ba_ubc = util.ccs_transfer_sim2obs_upper_bound_climatology(data_dict, days)
+
+        # Assert that shapes are the same for now, can figure out better tests later
+        assert sim_fut_ba_ubc.shape == data_dict['sim_fut'].shape
+
 
 if __name__ == '__main__':
     unittest.main()
