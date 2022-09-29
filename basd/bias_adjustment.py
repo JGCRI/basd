@@ -3,6 +3,8 @@ from joblib import Parallel, delayed
 import numpy as np
 import xarray as xr
 
+from basd.ba_params import Parameters
+import basd.regridding as rg
 import basd.utils as util
 import basd.one_loc_output as olo
 
@@ -12,7 +14,9 @@ class Adjustment:
                  obs_hist: xr.Dataset,
                  sim_hist: xr.Dataset,
                  sim_fut: xr.Dataset,
-                 variable: str, params):
+                 variable: str,
+                 params: Parameters,
+                 remap_grid: bool = False):
 
         # Setting the data
         # Also converting calendar to proleptic_gregorian.
@@ -32,6 +36,12 @@ class Adjustment:
 
         # Set dimension names to lat, lon, time
         self.set_dim_names()
+
+        # Maps observational data onto simulated data grid resolution
+        if remap_grid:
+            self.obs_hist = rg.match_grids(self.obs_hist, self.sim_hist, self.sim_fut)
+            self.datasets['obs_hist'] = self.obs_hist
+            print(f'Remapped observational grid. New size: {self.obs_hist.sizes}')
 
         # Forces data to have same spatial shape and resolution
         self.assert_consistency_of_data_resolution()
