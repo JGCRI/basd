@@ -29,9 +29,11 @@ setup(
         "joblib",
         "matplotlib",
         "numpy",
-        "PyYAML",
         "netCDF4",
         "pandas",
+        "PyYAML",
+        "rasterio",
+        "rioxarray",
         "scipy",
         "seaborn",
         "xarray"
