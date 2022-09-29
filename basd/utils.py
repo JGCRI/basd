@@ -875,6 +875,10 @@ def get_data_within_thresholds(data, params):
         within the thresholds
     i_obs_hist: np.Array
         indexes which inform where the observational data is within the thresholds.
+    i_sim_hist: np.Array
+        indexes which inform where the simulated historical data is within the thresholds.
+    i_sim_fut: np.Array
+        indexes which inform where the simulated future data is within the thresholds.
     """
     lower = params.lower_bound is not None and params.lower_threshold is not None
     upper = params.upper_bound is not None and params.upper_threshold is not None
