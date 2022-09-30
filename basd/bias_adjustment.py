@@ -1,4 +1,6 @@
 import datetime as dt
+import logging
+
 from joblib import Parallel, delayed
 import numpy as np
 import xarray as xr
@@ -449,7 +451,7 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
     # Print out location being gridded
     lat = float(obs_hist_loc['lat'])
     lon = float(obs_hist_loc['lon'])
-    print(f'Gridding (lat, lon) = ({lat}, {lon})')
+    logging.info(f'Gridding (lat, lon) = ({lat}, {lon})')
 
     # Put in dictionary for easy iteration
     data_loc = {
