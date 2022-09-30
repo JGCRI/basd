@@ -199,6 +199,40 @@ class TestUtils(unittest.TestCase):
         # Assert that shapes are the same for now, can figure out better tests later
         assert sim_fut_ba_ubc.shape == data_dict['sim_fut'].shape
 
+    def test_scale_by_upper_bound_climatology(self):
+        # Data array of positive values
+        data_arr = np.array([1, 2, 3, 4, 5])
+        # Upper bounds
+        ubc = np.array([2, 3, 4, 5, 6])
+        # Data array as proportion of upper bounds
+        data_arr_scaled = data_arr/ubc
+
+        # Everything here is the simple case, so should just divide
+        # and then multiply to scale back up
+        simple_divide = data_arr/ubc
+        simple_prod = data_arr_scaled * ubc
+        function_divide = util.scale_by_upper_bound_climatology(data_arr, ubc)
+        function_prod = util.scale_by_upper_bound_climatology(data_arr_scaled, ubc, divide=False)
+
+        # Equal in the simple case
+        np.testing.assert_array_equal(simple_prod, function_prod)
+        np.testing.assert_array_equal(simple_divide, function_divide)
+
+        # What if we have zeros in ubc or data_arr exceeds ubc
+        ubc = np.array([0, 1, 4, 5, 6])
+
+        #  should get [0, 1, 3/4, 4/5, 5/6]
+        function_divide = util.scale_by_upper_bound_climatology(data_arr, ubc)
+        np.testing.assert_array_almost_equal(np.array([0, 1, 3/4, 4/5, 5/6]),
+                                             function_divide)
+
+        # nans
+        data_arr = np.array([np.nan, 2, 4])
+        ubc = np.array([np.nan, np.nan, 3])
+        nan_divide = util.scale_by_upper_bound_climatology(data_arr, ubc)
+        np.testing.assert_array_almost_equal(np.array([np.nan, np.nan, 1]),
+                                             nan_divide)
+
 
 if __name__ == '__main__':
     unittest.main()
