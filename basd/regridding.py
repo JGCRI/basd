@@ -1,6 +1,5 @@
 from rasterio.enums import Resampling
 
-import rioxarray as rio
 import xarray as xr
 
 
@@ -24,10 +23,6 @@ def match_grids(obs_hist: xr.Dataset, sim_hist: xr.Dataset, sim_fut: xr.Dataset)
     -------
     obs_hist_resized: xr.Dataset
         Observational data resized to match simulated data
-    sim_hist: xr.Dataset
-        Simulated historical data
-    sim_fut: xr.Dataset
-        Simulated future data
     """
     # TODO: Allow coordinate system to be specified
     # Assert the coordinate reference system. Assumes CRS known by code ESPG:4326
