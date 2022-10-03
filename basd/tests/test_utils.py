@@ -233,6 +233,30 @@ class TestUtils(unittest.TestCase):
         np.testing.assert_array_almost_equal(np.array([np.nan, np.nan, 1]),
                                              nan_divide)
 
+    def test_window_centers_for_running_bias_adjustment(self):
+        # Days corresponding to each dataset
+        days = {
+            'obs_hist': np.arange(366) + 1,
+            'sim_hist': np.arange(366) + 1,
+            'sim_fut': np.arange(366) + 1
+        }
+
+        # Step-size for running window mode
+        step_size = 15
+
+        # Centers of the windows
+        centers = util.window_centers_for_running_bias_adjustment(days, step_size)
+
+        # What should be output
+        equal_arr = np.array([4, 19, 34, 49, 64, 79,
+                              94, 109, 124, 139, 154,
+                              169, 184, 199, 214, 229,
+                              244, 259, 274, 289, 304,
+                              319, 334, 349, 364])
+
+        # Should be the same shape as simulated future pre-adjusted data
+        assert np.all(equal_arr == centers)
+
 
 if __name__ == '__main__':
     unittest.main()
