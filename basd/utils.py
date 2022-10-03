@@ -1413,8 +1413,8 @@ def map_quantiles_parametric_trend_preserving(data, params):
                                            lower, upper)
 
     # break here if target distributions cannot be determined
-    if not np.any(i_target):
-        msg = 'unable to do any quantile mapping' \
+    if not np.any(i_target) or not np.any(i_source):
+        msg = 'Unable to do any quantile mapping' \
               + ': leaving %i value(s) unadjusted' % np.sum(i_source)
         warnings.warn(msg)
         return y
