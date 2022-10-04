@@ -1,4 +1,6 @@
 import datetime as dt
+import logging
+
 from joblib import Parallel, delayed
 import numpy as np
 import xarray as xr
@@ -41,7 +43,6 @@ class Adjustment:
         if remap_grid:
             self.obs_hist = rg.match_grids(self.obs_hist, self.sim_hist, self.sim_fut)
             self.datasets['obs_hist'] = self.obs_hist
-            print(f'Remapped observational grid. New size: {self.obs_hist.sizes}')
 
         # Forces data to have same spatial shape and resolution
         self.assert_consistency_of_data_resolution()
@@ -447,6 +448,12 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
     sim_fut_ba_loc: xarray.DataArray
         adjusted time series with times, lat and lon
     """
+    # Print out location being gridded
+    lat = float(obs_hist_loc['lat'])
+    lon = float(obs_hist_loc['lon'])
+    print(f'Gridding (lat, lon) = ({lat}, {lon})',
+          flush=True)
+
     # Put in dictionary for easy iteration
     data_loc = {
         'obs_hist': obs_hist_loc,
