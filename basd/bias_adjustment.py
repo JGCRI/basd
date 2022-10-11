@@ -28,7 +28,7 @@ class Adjustment:
         self.sim_fut = sim_fut.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
         self.variable = variable
         self.params = params
-        self.input_calendar = obs_hist.time.dt.calendar
+        self.input_calendar = sim_hist.time.dt.calendar
         self.datasets = {
             'obs_hist': self.obs_hist,
             'sim_hist': self.sim_hist,
@@ -336,7 +336,13 @@ class Adjustment:
         path: str
             Location and name of output file
         """
-        self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
+        try:
+            self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
+        except AttributeError:
+            try:
+                self.sim_fut_ba.to_netcdf(path)
+            except AttributeError:
+                AttributeError('Unable to write to NetCDF. Possibly incompatible calendars.')
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
