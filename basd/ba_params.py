@@ -4,7 +4,8 @@ import numpy as np
 class Parameters:
     # TODO: Include each parameter in docstring
     def __init__(self, step_size=1, distribution=None, months=None,
-                 lower_bound=None, lower_threshold=None, upper_bound=None, upper_threshold=None,
+                 lower_bound: float = None, lower_threshold: float = None,
+                 upper_bound: float = None, upper_threshold: float = None,
                  n_iterations=0, halfwin_ubc=0, trend_preservation='additive', n_quantiles=50,
                  p_value_eps=1.e-10, max_change_factor=100., max_adjustment_factor=9.,
                  if_all_invalid_use=None, adjust_p_values=False, detrend=False, unconditional_ccs_transfer=False,
