@@ -31,6 +31,7 @@ setup(
         "numpy",
         "netCDF4",
         "pandas",
+        "plotly",
         "PyYAML",
         "rasterio",
         "rioxarray",
