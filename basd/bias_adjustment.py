@@ -1,5 +1,4 @@
 import datetime as dt
-import logging
 
 from joblib import Parallel, delayed
 import numpy as np
@@ -29,7 +28,7 @@ class Adjustment:
         self.sim_fut = sim_fut.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
         self.variable = variable
         self.params = params
-        self.input_calendar = obs_hist.time.dt.calendar
+        self.input_calendar = sim_hist.time.dt.calendar
         self.datasets = {
             'obs_hist': self.obs_hist,
             'sim_hist': self.sim_hist,
@@ -57,7 +56,7 @@ class Adjustment:
         # TODO: Scale data if halfwin_upper_bound_climatology
 
         # Set up output dataset to have same form as input now that it has been standardized
-        self.sim_fut_ba = self.sim_fut
+        self.sim_fut_ba = self.sim_fut.copy()
 
     def assert_full_period_coverage(self):
         """
@@ -167,9 +166,6 @@ class Adjustment:
         self.sim_hist = self.datasets['sim_hist']
         self.sim_fut = self.datasets['sim_fut']
 
-    def abol_vec(self, i_loc):
-        return self.adjust_bias_one_location(dict(lat=i_loc[0], lon=i_loc[1]))
-
     def adjust_bias_one_location(self, i_loc, full_details=True):
         """
         Bias adjusts one grid cell
@@ -249,11 +245,13 @@ class Adjustment:
         # If we scaled variable before, time to scale back
         if self.params.halfwin_ubc:
             result.values = util.scale_by_upper_bound_climatology(result, ubc_ba, divide=False)
+            obs_hist_loc.values = util.scale_by_upper_bound_climatology(obs_hist_loc, ubcs['obs_hist'], divide=False)
+            sim_hist_loc.values = util.scale_by_upper_bound_climatology(sim_hist_loc, ubcs['sim_hist'], divide=False)
             sim_fut_loc.values = util.scale_by_upper_bound_climatology(sim_fut_loc, ubcs['sim_fut'], divide=False)
 
         # Return resulting array with extra details if requested
         if full_details:
-            return olo.BaLocOutput(result, sim_fut_loc, self.variable, self.params)
+            return olo.BaLocOutput(result, sim_fut_loc, obs_hist_loc, sim_hist_loc, self.variable, self.params)
 
         # Return just resulting array if extra details not requested
         return result
@@ -338,7 +336,13 @@ class Adjustment:
         path: str
             Location and name of output file
         """
-        self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
+        try:
+            self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
+        except AttributeError:
+            try:
+                self.sim_fut_ba.to_netcdf(path)
+            except AttributeError:
+                AttributeError('Unable to write to NetCDF. Possibly incompatible calendars.')
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
@@ -370,8 +374,7 @@ def running_window_mode(result, window_centers, data_loc, days, years, long_term
     # Adjust bias for each window center
     for window_center in window_centers:
         data_this_window, years_this_window = util.get_data_in_window(window_center, data_loc,
-                                                                      days, years,
-                                                                      long_term_mean)
+                                                                      days, years, long_term_mean, params)
 
         # Send data to adjust bias one month
         result_this_window = util.adjust_bias_one_month(data_this_window, years_this_window,
@@ -415,7 +418,7 @@ def month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, 
     for month in params.months:
         data_this_month, years_this_month = util.get_data_in_month(month, data_loc,
                                                                    years, month_numbers,
-                                                                   long_term_mean)
+                                                                   long_term_mean, params)
 
         # Send data to adjust bias one month
         result_this_month = util.adjust_bias_one_month(data_this_month, years_this_month, params)

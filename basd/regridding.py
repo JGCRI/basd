@@ -31,8 +31,8 @@ def match_grids(obs_hist: xr.Dataset, sim_hist: xr.Dataset, sim_fut: xr.Dataset)
     sim_fut.rio.write_crs(4326, inplace=True)
 
     # Temporarily renaming (lon, lat) --> (x, y) and ordering dimensions as time, y, x
-    obs_hist_xy = obs_hist.rename({'lon': 'x', 'lat': 'y'}).transpose('time', 'y', 'x')
-    sim_hist_xy = sim_hist.rename({'lon': 'x', 'lat': 'y'}).transpose('time', 'y', 'x')
+    obs_hist_xy = obs_hist.rename({'lon': 'x', 'lat': 'y'}).transpose('time', 'y', 'x', ...)
+    sim_hist_xy = sim_hist.rename({'lon': 'x', 'lat': 'y'}).transpose('time', 'y', 'x', ...)
 
     # Project observational data onto simulated resolution
     obs_hist_resized_xy = obs_hist_xy.rio.reproject_match(sim_hist_xy,

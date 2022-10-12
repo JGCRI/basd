@@ -1,4 +1,3 @@
-import logging
 import numpy as np
 import warnings
 import pandas as pd
@@ -6,6 +5,8 @@ from pandas import Series
 import scipy.interpolate as spi
 import scipy.stats as sps
 from scipy.signal import convolve
+
+from basd.ba_params import Parameters
 
 # Dictionary of possible distribution params implemented thus far
 DISTRIBUTION_PARAMS = {
@@ -374,7 +375,7 @@ def window_indices_for_running_bias_adjustment(
     return i_window
 
 
-def get_data_in_window(window_center, data_loc, days, years, long_term_mean):
+def get_data_in_window(window_center, data_loc, days, years, long_term_mean, params: Parameters):
     years_this_window = {}
     data_this_window = {}
     for key, data_arr in data_loc.items():
@@ -383,14 +384,17 @@ def get_data_in_window(window_center, data_loc, days, years, long_term_mean):
         # Associated year for each data point in the resulting data
         years_this_window[key] = years[key][m]
         # Sample invalid values
-        replaced, invalid = sample_invalid_values(data_arr.values[m], 1, long_term_mean[key])
+        replaced, invalid = sample_invalid_values(data_arr.values[m],
+                                                  seed=1,
+                                                  if_all_invalid_use=params.if_all_invalid_use,
+                                                  warn=params.invalid_value_warnings)
         # The actual needed data in this window
         data_this_window[key] = replaced
 
     return data_this_window, years_this_window
 
 
-def get_data_in_month(month, data_loc, years, month_numbers, long_term_mean):
+def get_data_in_month(month, data_loc, years, month_numbers, long_term_mean, params: Parameters):
     years_this_month = {}
     data_this_month = {}
     for key, data_arr in data_loc.items():
@@ -402,7 +406,10 @@ def get_data_in_month(month, data_loc, years, month_numbers, long_term_mean):
         y = years[key]
         years_this_month[key] = None if y is None else y[m]
         # Sample invalid values
-        replaced, invalid = sample_invalid_values(data_arr.values[m], 1, long_term_mean[key])
+        replaced, invalid = sample_invalid_values(data_arr.values[m],
+                                                  seed=1,
+                                                  if_all_invalid_use=params.if_all_invalid_use,
+                                                  warn=params.invalid_value_warnings)
         # The actual needed data in this window
         data_this_month[key] = replaced
 
