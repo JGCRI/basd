@@ -129,6 +129,134 @@ class TestUtils(unittest.TestCase):
         assert put is None
         assert plout is None
 
+    def test_aggregate_periodic(self):
+        # [0, 1, 2, 3, 4]
+        simple_array = np.arange(5)
+        # Take window to include one entry on either side of center
+        halfwin = 1
+
+        # Taking the max of a running window of size 3, that wraps,
+        # [4, 2, 3, 4, 4]
+        simple_max = util.aggregate_periodic(simple_array, halfwin, 'max')
+        np.testing.assert_array_equal(simple_max,
+                                      np.array([4, 2, 3, 4, 4]))
+
+        # Taking the mean of a running window of size 3, that wraps,
+        # [5/3, 1, 2, 3, 7/3]
+        simple_mean = util.aggregate_periodic(simple_array, halfwin)
+        np.testing.assert_array_almost_equal(simple_mean,
+                                             np.array([5/3, 1, 2, 3, 7/3]))
+
+        # NA values
+        # The middle three aggregated values will now be nan
+        # [0, 1, nan, 3, 3]
+        na_array = np.array([0, 1, np.nan, 3, 3])
+        na_mean = util.aggregate_periodic(na_array, halfwin)
+        np.testing.assert_array_almost_equal(na_mean,
+                                             np.array([4/3, np.nan, np.nan, np.nan, 2]))
+
+        # Invalid aggregation method raises value error
+        self.assertRaises(ValueError, util.aggregate_periodic,
+                          simple_array, halfwin, 'mode')
+
+    def test_get_upper_bound_climatology(self):
+        # Number of years in our data
+        n_years = 2
+        # Data array
+        data_arr = np.random.uniform(0, 1, 366 * n_years)
+        # Day of the year
+        days = np.repeat(np.arange(366) + 1, n_years)
+        # Half window size
+        halfwin = 15
+
+        # Get upper bounds
+        ubcs = util.get_upper_bound_climatology(data_arr, days, halfwin)
+
+        # Assert that shapes are the same for now, can figure out better tests later
+        assert ubcs.shape == data_arr.shape
+
+    def test_ccs_transfer_sim2obs_upper_bound_climatology(self):
+        # Number of years in our data
+        n_years = 2
+
+        # Data arrays
+        data_dict = {
+            'obs_hist': np.random.uniform(0, 1, 366 * n_years),
+            'sim_hist': np.random.uniform(0, 1, 366 * n_years),
+            'sim_fut': np.random.uniform(0, 1, 366 * (1+n_years))
+        }
+
+        # Associated days
+        days = {
+            'obs_hist': np.repeat(np.arange(366) + 1, n_years),
+            'sim_hist': np.repeat(np.arange(366) + 1, n_years),
+            'sim_fut': np.repeat(np.arange(366) + 1, (1+n_years))
+        }
+
+        # Transfer climatology trend
+        sim_fut_ba_ubc = util.ccs_transfer_sim2obs_upper_bound_climatology(data_dict, days)
+
+        # Assert that shapes are the same for now, can figure out better tests later
+        assert sim_fut_ba_ubc.shape == data_dict['sim_fut'].shape
+
+    def test_scale_by_upper_bound_climatology(self):
+        # Data array of positive values
+        data_arr = np.array([1, 2, 3, 4, 5])
+        # Upper bounds
+        ubc = np.array([2, 3, 4, 5, 6])
+        # Data array as proportion of upper bounds
+        data_arr_scaled = data_arr/ubc
+
+        # Everything here is the simple case, so should just divide
+        # and then multiply to scale back up
+        simple_divide = data_arr/ubc
+        simple_prod = data_arr_scaled * ubc
+        function_divide = util.scale_by_upper_bound_climatology(data_arr, ubc)
+        function_prod = util.scale_by_upper_bound_climatology(data_arr_scaled, ubc, divide=False)
+
+        # Equal in the simple case
+        np.testing.assert_array_equal(simple_prod, function_prod)
+        np.testing.assert_array_equal(simple_divide, function_divide)
+
+        # What if we have zeros in ubc or data_arr exceeds ubc
+        ubc = np.array([0, 1, 4, 5, 6])
+
+        #  should get [0, 1, 3/4, 4/5, 5/6]
+        function_divide = util.scale_by_upper_bound_climatology(data_arr, ubc)
+        np.testing.assert_array_almost_equal(np.array([0, 1, 3/4, 4/5, 5/6]),
+                                             function_divide)
+
+        # nans
+        data_arr = np.array([np.nan, 2, 4])
+        ubc = np.array([np.nan, np.nan, 3])
+        nan_divide = util.scale_by_upper_bound_climatology(data_arr, ubc)
+        np.testing.assert_array_almost_equal(np.array([np.nan, np.nan, 1]),
+                                             nan_divide)
+
+    def test_window_centers_for_running_bias_adjustment(self):
+        # Days corresponding to each dataset
+        days = {
+            'obs_hist': np.arange(366) + 1,
+            'sim_hist': np.arange(366) + 1,
+            'sim_fut': np.arange(366) + 1
+        }
+
+        # Step-size for running window mode
+        step_size = 15
+
+        # Centers of the windows
+        centers = util.window_centers_for_running_bias_adjustment(days, step_size)
+
+        # What should be output
+        equal_arr = np.array([4, 19, 34, 49, 64, 79,
+                              94, 109, 124, 139, 154,
+                              169, 184, 199, 214, 229,
+                              244, 259, 274, 289, 304,
+                              319, 334, 349, 364])
+
+        # Should be the same shape as simulated future pre-adjusted data
+        assert np.all(equal_arr == centers)
+
 
 if __name__ == '__main__':
     unittest.main()

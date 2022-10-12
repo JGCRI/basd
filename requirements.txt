@@ -1,8 +1,13 @@
+dask
+joblib
 matplotlib
 netCDF4
 numpy>=1.23
 pandas
+plotly
 PyYAML>=5.4.1
+rasterio
+rioxarray
 scipy
 seaborn
 xarray

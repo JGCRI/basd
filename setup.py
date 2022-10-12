@@ -22,20 +22,26 @@ setup(
     description='',
     long_description=readme(),
     long_description_content_type="text/markdown",
-    python_requires='>=3.8.*, <4',
+    python_requires='>=3.6.*, <4',
     include_package_data=True,
     install_requires=[
+        "dask",
+        "joblib",
         "matplotlib",
-        "numpy>=1.23",
-        "PyYAML>=6",
+        "numpy",
         "netCDF4",
         "pandas",
+        "plotly",
+        "PyYAML",
+        "rasterio",
+        "rioxarray",
         "scipy",
         "seaborn",
         "xarray"
     ],
     extras_require={
         'dev': [
+            "plotly"
         ]
     }
 )

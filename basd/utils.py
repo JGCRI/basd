@@ -4,6 +4,9 @@ import pandas as pd
 from pandas import Series
 import scipy.interpolate as spi
 import scipy.stats as sps
+from scipy.signal import convolve
+
+from basd.ba_params import Parameters
 
 # Dictionary of possible distribution params implemented thus far
 DISTRIBUTION_PARAMS = {
@@ -40,6 +43,205 @@ def ma2a(a, raise_error: bool = False):
             return b.filled(np.nan)
     else:
         return b.data
+
+
+def aggregate_periodic(arr, halfwin, aggregator='mean'):
+    """
+    Aggregates arr using the given aggregator and a running window of length
+    2 * halfwin + 1 assuming that arr is periodic.
+
+    Parameters
+    ----------
+    arr : np.Array
+        Array to be aggregated.
+    halfwin : int
+        Determines length of running window used for aggregation.
+    aggregator : str, optional
+        Determines how arr is aggregated along axis 0 for every running window.
+
+    Returns
+    -------
+    rm : np.ndarray
+        Result of aggregation. Same shape as arr.
+
+    """
+    # Window should be positive length
+    assert halfwin >= 0, 'halfwin < 0'
+    if not halfwin:
+        return arr
+
+    # Extend a periodically
+    # Size of the array
+    n = arr.size
+    # Making sure window contained within array
+    assert n >= halfwin, 'length of a along axis 0 less than halfwin'
+    # Wrapping array
+    b = np.concatenate((arr[-halfwin:], arr, arr[:halfwin]))
+
+    # Full window width
+    window = 2 * halfwin + 1
+
+    # Aggregate using algorithm for max inspired by
+    # <http://p-nand-q.com/python/algorithms/searching/max-sliding-window.html>
+    if aggregator == 'max':
+        c = list(np.maximum.accumulate(b[:window][::-1]))
+        rm = np.empty_like(arr)
+        rm[0] = c[-1]
+        for i in range(n - 1):
+            c_new = b[i + window]
+            del c[-1]
+            for j in range(window - 1):
+                if c_new > c[j]:
+                    c[j] = c_new
+                else:
+                    break
+            c.insert(0, c_new)
+            rm[i + 1] = c[-1]
+    elif aggregator == 'mean':
+        rm = convolve(b, np.repeat(1. / window, window), 'valid')
+    else:
+        raise ValueError(f'aggregator {aggregator} not supported')
+
+    return rm
+
+
+def get_upper_bound_climatology(data_arr, days, halfwin):
+    """
+    Estimates an annual cycle of upper bounds as running mean values of running
+    maximum values of multi-year daily maximum values.
+
+    Parameters
+    ----------
+    data_arr: np.Array
+        Time series for which annual cycles of upper bounds shall be estimated.
+    days: np.Array
+        Day of the year time series corresponding to d.
+    halfwin: int
+        Determines length of running windows used for estimation.
+
+    Returns
+    -------
+    ubc: np.Array
+        Upper bound climatology.
+    days_unique: np.Array
+        Days of the year of upper bound climatology.
+    """
+    # Each data obs must have associated day of the year, thus shapes must be the same
+    assert data_arr.shape == days.shape, 'data and days differ in shape'
+
+    # Get the unique days of the year in order
+    unique_days = np.sort(np.unique(days))
+
+    # Warn user if number of unique days is less than 366
+    n = unique_days.size
+    if n != 366:
+        msg = (f'Upper bound climatology only defined for {n} days of the year:'
+               ' this may imply an invalid computation of the climatology')
+        warnings.warn(msg)
+
+    # The max value in the data for each day of the year
+    daily_max = np.empty(unique_days.size, data_arr.dtype)
+    for i, day in enumerate(unique_days):
+        daily_max[i] = np.max(data_arr[days == day])
+
+    # Moving window max
+    moving_window_max = aggregate_periodic(daily_max, halfwin, 'max')
+    # Moving window mean
+    moving_window_max_mean = aggregate_periodic(moving_window_max, halfwin)
+
+    # Smooth ubc
+    ubc = data_arr.copy()
+    for day in unique_days:
+        ubc[days == day] = moving_window_max_mean[unique_days == day]
+
+    return ubc
+
+
+def scale_by_upper_bound_climatology(data_arr, ubc, divide=True):
+    """
+    Scales all values in d using the annual cycle of upper bounds.
+
+    Parameters
+    ----------
+    data_arr: np.Array
+        Time series to be scaled. Is changed in-place.
+    ubc: np.Array
+        Upper bound climatology used for scaling.
+    divide: boolean, optional
+        If True then d is divided by upper_bound_climatology, otherwise they
+        are multiplied.
+
+    Returns
+    -------
+    new_arr: np.Array
+        Time series array scaled to the upper bound climatology
+    """
+    # For each data observation we should have smooth ubc corresponding value
+    assert data_arr.shape == ubc.shape, 'Data and ubc shapes differ'
+
+    # If we are scaling to [0, 1]
+    if divide:
+        # Careful not to divide by zero. When upper bound is zero, set data to zero
+        # (this is rather irrelevant, but only way ubc is zero is if data is zero there anyway)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            new_arr = np.where(ubc == 0, 0, data_arr / ubc)
+        # Make values within range
+        new_arr[new_arr > 1] = 1
+        new_arr[new_arr < 0] = 0
+
+    # If we are scaling back from [0, 1]
+    else:
+        new_arr = data_arr * ubc
+        # Make sure values don't exceed ubc
+        new_arr[new_arr > ubc] = ubc[new_arr > ubc]
+
+    return new_arr
+
+
+def ccs_transfer_sim2obs_upper_bound_climatology(ubcs, days):
+    """
+    Transfers climatology trend observed in the simulated data to the observed data.
+
+    Parameters
+    ----------
+    ubcs: dict
+        np.Arrays of the upper bounds for each day in each time series
+    days: dict
+        np.Arrays with the day of year for each data point in each array
+
+    Returns
+    -------
+    sim_fut_ba: np.Array
+        Upper bound for the future bias adjusted data
+    """
+    # Must have the same coverage of days
+    msg = f'Not all input data covers the same days. Check the calendar and/or missing values'
+    assert np.all(np.unique(days['obs_hist']) == np.unique(days['sim_hist'])), msg
+    assert np.all(np.unique(days['obs_hist']) == np.unique(days['sim_fut'])), msg
+
+    # Data
+    obs_hist = ubcs['obs_hist']
+    sim_hist = ubcs['sim_hist']
+    sim_fut = ubcs['sim_fut']
+
+    # Unadjusted output of correct shape
+    sim_fut_ba = sim_fut.copy()
+
+    # For each day, find the ubc for adjustment. Should have same shape as sim_fut
+    for day in np.unique(days['obs_hist']):
+        with np.errstate(divide='ignore', invalid='ignore'):
+            # Get the ubc for the given day in each time series
+            # Just need the value so take the first one
+            ubc_sim_hist = sim_hist[days['sim_hist'] == day][0]
+            ubc_sim_fut = sim_fut[days['sim_fut'] == day][0]
+            ubc_obs_hist = obs_hist[days['obs_hist'] == day][0]
+            # Calc the change factor
+            change_factor = np.where(ubc_sim_hist == 0, 1, ubc_sim_fut / ubc_sim_hist)
+            change_factor = np.maximum(0.1, np.minimum(10, change_factor))
+            # Scale obs_hist by the change factor and save it into the correct spot in sim_fut_ba
+            sim_fut_ba[days['sim_fut'] == day] = change_factor * ubc_obs_hist
+
+    return sim_fut_ba
 
 
 def average_valid_values(a, if_all_invalid_use=np.nan,
@@ -173,7 +375,7 @@ def window_indices_for_running_bias_adjustment(
     return i_window
 
 
-def get_data_in_window(window_center, data_loc, days, years, long_term_mean):
+def get_data_in_window(window_center, data_loc, days, years, long_term_mean, params: Parameters):
     years_this_window = {}
     data_this_window = {}
     for key, data_arr in data_loc.items():
@@ -182,14 +384,17 @@ def get_data_in_window(window_center, data_loc, days, years, long_term_mean):
         # Associated year for each data point in the resulting data
         years_this_window[key] = years[key][m]
         # Sample invalid values
-        replaced, invalid = sample_invalid_values(data_arr.values[m], 1, long_term_mean[key])
+        replaced, invalid = sample_invalid_values(data_arr.values[m],
+                                                  seed=1,
+                                                  if_all_invalid_use=params.if_all_invalid_use,
+                                                  warn=params.invalid_value_warnings)
         # The actual needed data in this window
         data_this_window[key] = replaced
 
     return data_this_window, years_this_window
 
 
-def get_data_in_month(month, data_loc, years, month_numbers, long_term_mean):
+def get_data_in_month(month, data_loc, years, month_numbers, long_term_mean, params: Parameters):
     years_this_month = {}
     data_this_month = {}
     for key, data_arr in data_loc.items():
@@ -201,7 +406,10 @@ def get_data_in_month(month, data_loc, years, month_numbers, long_term_mean):
         y = years[key]
         years_this_month[key] = None if y is None else y[m]
         # Sample invalid values
-        replaced, invalid = sample_invalid_values(data_arr.values[m], 1, long_term_mean[key])
+        replaced, invalid = sample_invalid_values(data_arr.values[m],
+                                                  seed=1,
+                                                  if_all_invalid_use=params.if_all_invalid_use,
+                                                  warn=params.invalid_value_warnings)
         # The actual needed data in this window
         data_this_month[key] = replaced
 
@@ -234,6 +442,23 @@ def percentile1d(a, p):
     i_below = np.floor(i).astype(int)
     w_above = i - i_below
     return b[i_below] * (1. - w_above) + b[i_below + (i_below < n)] * w_above
+
+
+def chunk_indexes(chunk_sizes):
+    all_lat_indexes = np.arange(sum(chunk_sizes['lat']))
+    all_lon_indexes = np.arange(sum(chunk_sizes['lon']))
+    lat_indexes = {}
+    lon_indexes = {}
+    cum_sum = 0
+    for i, size in enumerate(chunk_sizes['lat']):
+        lat_indexes[i] = all_lat_indexes[np.arange(size) + cum_sum]
+        cum_sum += size
+    cum_sum = 0
+    for i, size in enumerate(chunk_sizes['lon']):
+        lon_indexes[i] = all_lon_indexes[np.arange(size) + cum_sum]
+        cum_sum += size
+
+    return lat_indexes, lon_indexes
 
 
 def time_scraping(adjustment):
@@ -658,6 +883,10 @@ def get_data_within_thresholds(data, params):
         within the thresholds
     i_obs_hist: np.Array
         indexes which inform where the observational data is within the thresholds.
+    i_sim_hist: np.Array
+        indexes which inform where the simulated historical data is within the thresholds.
+    i_sim_fut: np.Array
+        indexes which inform where the simulated future data is within the thresholds.
     """
     lower = params.lower_bound is not None and params.lower_threshold is not None
     upper = params.upper_bound is not None and params.upper_threshold is not None
@@ -915,7 +1144,36 @@ def map_quantiles_non_parametric_brute_force(x, y):
 
 
 def map_quantiles_non_parametric_with_constant_extrapolation(x, q_sim, q_obs):
-    return x, q_sim, q_obs
+    """
+    Uses quantile-quantile pairs represented by values in q_sim and q_obs
+    for quantile mapping of x.
+
+    Values in x beyond the range of q_sim are mapped following the constant
+    extrapolation approach, see Boe et al. (2007)
+    <https://doi.org/10.1002/joc.1602>.
+
+    Parameters
+    ----------
+    x : np.Array
+        Simulated time series.
+    q_sim : np.Array
+        Simulated quantiles.
+    q_obs : np.Array
+        Observed quantiles.
+
+    Returns
+    -------
+    y : np.Array
+        Result of quantile mapping.
+
+    """
+    assert q_sim.size == q_obs.size
+    ind_under = x < q_sim[0]
+    ind_over = x > q_sim[-1]
+    y = np.interp(x, q_sim, q_obs)
+    y[ind_under] = x[ind_under] + (q_obs[0] - q_sim[0])
+    y[ind_over] = x[ind_over] + (q_obs[-1] - q_sim[-1])
+    return y
 
 
 def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, params):
@@ -960,7 +1218,7 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
 
         # Fit distributions to x_source and x_target
         shape_loc_scale_source = fit(spsdotwhat, x_source_fit, fwords)
-        shape_loc_scale_target = fit(spsdotwhat, x_source_fit, fwords)
+        shape_loc_scale_target = fit(spsdotwhat, x_target_fit, fwords)
 
         # This just uses MLE without fixing scale/location parameters ever
         # shape_loc_scale_source = spsdotwhat.fit(x_source_fit)
@@ -985,7 +1243,7 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
     # fit for the simulated future values
     p_source = spsdotwhat.cdf(x_source_map, *shape_loc_scale_source)
     # Limiting the p-values to not be too small or close to 1
-    p_source = np.maximum(params.p_value_eps, np.minimum(1-params.p_value_eps, p_source))
+    p_source = np.maximum(params.p_value_eps, np.minimum(1 - params.p_value_eps, p_source))
 
     # Compute target p-values
     if params.adjust_p_values:
@@ -1034,7 +1292,7 @@ def check_shape_loc_scale(spsdotwhat, shape_loc_scale):
     # Bounds for bet distribution
     elif spsdotwhat == sps.beta:
         return 2 if shape_loc_scale[0] <= 0 or shape_loc_scale[1] <= 0 \
-            or shape_loc_scale[0] > 1e10 or shape_loc_scale[1] > 1e10 else 0
+                    or shape_loc_scale[0] > 1e10 or shape_loc_scale[1] > 1e10 else 0
     else:
         return 3
 
@@ -1162,8 +1420,8 @@ def map_quantiles_parametric_trend_preserving(data, params):
                                            lower, upper)
 
     # break here if target distributions cannot be determined
-    if not np.any(i_target):
-        msg = 'unable to do any quantile mapping' \
+    if not np.any(i_target) or not np.any(i_source):
+        msg = 'Unable to do any quantile mapping' \
               + ': leaving %i value(s) unadjusted' % np.sum(i_source)
         warnings.warn(msg)
         return y
