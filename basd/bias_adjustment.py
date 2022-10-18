@@ -317,6 +317,7 @@ class Adjustment:
                     month_numbers,
                     years) for i_loc in i_locations)
 
+            i_locations = np.ndindex(self.sizes['lat'], self.sizes['lon'])
             for i, i_loc in enumerate(i_locations):
                 self.sim_fut_ba[self.variable][dict(lat=i_loc[0], lon=i_loc[1])] = results[i]
 
@@ -452,10 +453,10 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
         adjusted time series with times, lat and lon
     """
     # Print out location being gridded
-    lat = float(obs_hist_loc['lat'])
-    lon = float(obs_hist_loc['lon'])
-    print(f'Gridding (lat, lon) = ({lat}, {lon})',
-          flush=True)
+    # lat = float(obs_hist_loc['lat'])
+    # lon = float(obs_hist_loc['lon'])
+    # print(f'Gridding (lat, lon) = ({lat}, {lon})',
+    #       flush=True)
 
     # Put in dictionary for easy iteration
     data_loc = {
