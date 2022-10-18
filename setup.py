@@ -27,7 +27,7 @@ setup(
     install_requires=[
         "dask",
         "joblib",
-        "matplotlib",
+        "matplotlib!=3.6.1,>=3.1",
         "numpy",
         "netCDF4",
         "pandas",
