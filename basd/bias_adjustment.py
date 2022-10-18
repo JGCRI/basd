@@ -453,10 +453,10 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
         adjusted time series with times, lat and lon
     """
     # Print out location being gridded
-    lat = float(obs_hist_loc['lat'])
-    lon = float(obs_hist_loc['lon'])
-    print(f'Gridding (lat, lon) = ({lat}, {lon})',
-          flush=True)
+    # lat = float(obs_hist_loc['lat'])
+    # lon = float(obs_hist_loc['lon'])
+    # print(f'Gridding (lat, lon) = ({lat}, {lon})',
+    #       flush=True)
 
     # Put in dictionary for easy iteration
     data_loc = {
