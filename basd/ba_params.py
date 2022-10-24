@@ -51,6 +51,8 @@ class Parameters:
         adjust_obs: boolean, optional
             If True then transfer simulated climate change signal to x_obs_hist,
             otherwise apply non-parametric quantile mapping to x_sim_fut.
+        unconditional_ccs_transfer: boolean, optional
+            If false (default), only uses values within thresholds for ccs, otherwise all values
         """
         # Setting the parameters for the adjustment
         self.step_size = step_size

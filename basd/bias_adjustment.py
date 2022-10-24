@@ -204,18 +204,18 @@ class Adjustment:
         ubcs = None
         if self.params.halfwin_ubc:
             ubcs = {
-                'obs_hist': util.get_upper_bound_climatology(obs_hist_loc,
+                'obs_hist': util.get_upper_bound_climatology(obs_hist_loc.values,
                                                              days['obs_hist'],
                                                              self.params.halfwin_ubc),
-                'sim_hist': util.get_upper_bound_climatology(sim_hist_loc,
+                'sim_hist': util.get_upper_bound_climatology(sim_hist_loc.values,
                                                              days['sim_hist'],
                                                              self.params.halfwin_ubc),
-                'sim_fut': util.get_upper_bound_climatology(sim_fut_loc,
+                'sim_fut': util.get_upper_bound_climatology(sim_fut_loc.values,
                                                             days['sim_fut'],
                                                             self.params.halfwin_ubc)
             }
             for key, value in data_loc.items():
-                data_loc[key].values = util.scale_by_upper_bound_climatology(value, ubcs[key], divide=True)
+                data_loc[key].values = util.scale_by_upper_bound_climatology(value.values, ubcs[key], divide=True)
 
             ubc_ba = util.ccs_transfer_sim2obs_upper_bound_climatology(ubcs, days)
 
@@ -244,10 +244,10 @@ class Adjustment:
 
         # If we scaled variable before, time to scale back
         if self.params.halfwin_ubc:
-            result.values = util.scale_by_upper_bound_climatology(result, ubc_ba, divide=False)
-            obs_hist_loc.values = util.scale_by_upper_bound_climatology(obs_hist_loc, ubcs['obs_hist'], divide=False)
-            sim_hist_loc.values = util.scale_by_upper_bound_climatology(sim_hist_loc, ubcs['sim_hist'], divide=False)
-            sim_fut_loc.values = util.scale_by_upper_bound_climatology(sim_fut_loc, ubcs['sim_fut'], divide=False)
+            result.values = util.scale_by_upper_bound_climatology(result.values, ubc_ba, divide=False)
+            obs_hist_loc.values = util.scale_by_upper_bound_climatology(obs_hist_loc.values, ubcs['obs_hist'], divide=False)
+            sim_hist_loc.values = util.scale_by_upper_bound_climatology(sim_hist_loc.values, ubcs['sim_hist'], divide=False)
+            sim_fut_loc.values = util.scale_by_upper_bound_climatology(sim_fut_loc.values, ubcs['sim_fut'], divide=False)
 
         # Return resulting array with extra details if requested
         if full_details:
@@ -469,18 +469,18 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
     ubc_ba = None
     if params.halfwin_ubc:
         ubcs = {
-            'obs_hist': util.get_upper_bound_climatology(obs_hist_loc,
+            'obs_hist': util.get_upper_bound_climatology(obs_hist_loc.values,
                                                          days['obs_hist'],
                                                          params.halfwin_ubc),
-            'sim_hist': util.get_upper_bound_climatology(sim_hist_loc,
+            'sim_hist': util.get_upper_bound_climatology(sim_hist_loc.values,
                                                          days['sim_hist'],
                                                          params.halfwin_ubc),
-            'sim_fut': util.get_upper_bound_climatology(sim_fut_loc,
+            'sim_fut': util.get_upper_bound_climatology(sim_fut_loc.values,
                                                         days['sim_fut'],
                                                         params.halfwin_ubc)
         }
         for key, value in data_loc.items():
-            data_loc[key].values = util.scale_by_upper_bound_climatology(value, ubcs[key], divide=True)
+            data_loc[key].values = util.scale_by_upper_bound_climatology(value.values, ubcs[key], divide=True)
 
         ubc_ba = util.ccs_transfer_sim2obs_upper_bound_climatology(ubcs, days)
 
@@ -509,7 +509,7 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
 
     # If we scaled variable before, time to scale back
     if params.halfwin_ubc:
-        result.values = util.scale_by_upper_bound_climatology(result, ubc_ba, divide=False)
+        result.values = util.scale_by_upper_bound_climatology(result.values, ubc_ba, divide=False)
 
     # Return just resulting array if extra details not requested
     return result
