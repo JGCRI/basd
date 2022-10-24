@@ -8,12 +8,12 @@ import basd
 
 class Profiling(unittest.TestCase):
 
-    DATA_PATH = '/Users/prim232/OneDrive - PNNL/Documents/BASD/data'
+    DATA_PATH = '../data'
 
     def test_rsds_profiling(self):
-        rsds_obs_hist_path = 'rsds_ewembi_2011_2016.nc4'
-        rsds_sim_hist_path = 'rsds_day_MIROC6_historical_r2i1p1f1_gn_20100101-20141231.nc'
-        rsds_sim_fut_path = 'rsds_day_MIROC6_ssp370_r2i1p1f1_gn_20150101-20241231.nc'
+        rsds_obs_hist_path = 'rsds_obs-hist_coarse_1979-2014.nc'
+        rsds_sim_hist_path = 'rsds_sim-hist_coarse_1979-2014.nc'
+        rsds_sim_fut_path = 'rsds_sim-fut_coarse_2065-2100.nc'
 
         rsds_obs_hist = xr.open_dataset(os.path.join(self.DATA_PATH, rsds_obs_hist_path),
                                         decode_coords='all')
@@ -38,7 +38,7 @@ class Profiling(unittest.TestCase):
                                   rsds_params,
                                   remap_grid=True)
 
-        loc = dict(lat=100, lon=100)
+        loc = dict(lat=0, lon=0)
         rsds_ba.adjust_bias_one_location(loc)
 
 
