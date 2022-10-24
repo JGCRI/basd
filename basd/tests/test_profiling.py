@@ -8,7 +8,8 @@ import basd
 
 class Profiling(unittest.TestCase):
 
-    DATA_PATH = '../data'
+    THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATA_PATH = os.path.join(THIS_DIR, '../data')
 
     def test_rsds_profiling(self):
         rsds_obs_hist_path = 'rsds_obs-hist_coarse_1979-2014.nc'
