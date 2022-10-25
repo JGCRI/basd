@@ -36,7 +36,10 @@ class Adjustment:
         }
 
         # Set dimension names to lat, lon, time
-        self.set_dim_names()
+        self.datasets = util.set_dim_names(self.datasets)
+        self.obs_hist = self.datasets['obs_hist']
+        self.sim_hist = self.datasets['sim_hist']
+        self.sim_fut = self.datasets['sim_fut']
 
         # Maps observational data onto simulated data grid resolution
         if remap_grid:
@@ -82,7 +85,7 @@ class Adjustment:
         self.sim_fut = self.datasets['sim_fut']
 
         # Getting updated time info
-        days, month_numbers, years = util.time_scraping(self)
+        days, month_numbers, years = util.time_scraping(self.datasets)
 
         # Asserting all years are here within range of first and last
         for key, data in self.datasets.items():
@@ -113,32 +116,6 @@ class Adjustment:
             msg = f'not all days between {ys}-01-01 and {ye}-12-31 are covered in {key}'
             assert year_arr.size == years_true.size and day_arr.size == days_true.size, msg
             assert np.all(year_arr == years_true) and np.all(day_arr == days_true), msg
-
-    def set_dim_names(self):
-        """
-        Makes sure latitude, longitude and time dimensions are present. These are set to be named
-        lat, lon, time if not already. Will assume a matching dimension if lat, lon, or time is in
-        the respective dimension name.
-        """
-        # For each of the datasets rename the dimensions
-        for data_name, data in self.datasets.items():
-            for key in data.dims:
-                if 'lat' in key.lower():
-                    self.datasets[data_name] = data.swap_dims({key: 'lat'})
-                elif 'lon' in key.lower():
-                    self.datasets[data_name] = data.swap_dims({key: 'lon'})
-                elif 'time' in key.lower():
-                    self.datasets[data_name] = data.swap_dims({key: 'time'})
-
-        # Make sure each required dimension is in each dataset
-        for data_name, data in self.datasets.items():
-            msg = f'{data_name} needs a latitude, longitude and time dimension'
-            assert all(i in data.dims for i in ['lat', 'lon', 'time']), msg
-
-        # Save the datasets with updated dimension labels
-        self.obs_hist = self.datasets['obs_hist']
-        self.sim_hist = self.datasets['sim_hist']
-        self.sim_fut = self.datasets['sim_fut']
 
     def assert_consistency_of_data_resolution(self):
         """
@@ -190,7 +167,7 @@ class Adjustment:
         sim_fut_loc = self.sim_fut[self.variable][i_loc]
 
         # Scraping the time from the data and turning into pandas date time array
-        days, month_numbers, years = util.time_scraping(self)
+        days, month_numbers, years = util.time_scraping(self.datasets)
 
         # Put in dictionary for easy iteration
         data_loc = {
@@ -244,10 +221,18 @@ class Adjustment:
 
         # If we scaled variable before, time to scale back
         if self.params.halfwin_ubc:
-            result.values = util.scale_by_upper_bound_climatology(result.values, ubc_ba, divide=False)
-            obs_hist_loc.values = util.scale_by_upper_bound_climatology(obs_hist_loc.values, ubcs['obs_hist'], divide=False)
-            sim_hist_loc.values = util.scale_by_upper_bound_climatology(sim_hist_loc.values, ubcs['sim_hist'], divide=False)
-            sim_fut_loc.values = util.scale_by_upper_bound_climatology(sim_fut_loc.values, ubcs['sim_fut'], divide=False)
+            result.values = util.scale_by_upper_bound_climatology(result.values,
+                                                                  ubc_ba,
+                                                                  divide=False)
+            obs_hist_loc.values = util.scale_by_upper_bound_climatology(obs_hist_loc.values,
+                                                                        ubcs['obs_hist'],
+                                                                        divide=False)
+            sim_hist_loc.values = util.scale_by_upper_bound_climatology(sim_hist_loc.values,
+                                                                        ubcs['sim_hist'],
+                                                                        divide=False)
+            sim_fut_loc.values = util.scale_by_upper_bound_climatology(sim_fut_loc.values,
+                                                                       ubcs['sim_fut'],
+                                                                       divide=False)
 
         # Return resulting array with extra details if requested
         if full_details:
@@ -277,7 +262,7 @@ class Adjustment:
 
         """
         # Get days, months and years data
-        days, month_numbers, years = util.time_scraping(self)
+        days, month_numbers, years = util.time_scraping(self.datasets)
 
         if lat_chunk_size & lon_chunk_size:
             # Manual chunk method
