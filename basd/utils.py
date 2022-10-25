@@ -18,6 +18,35 @@ DISTRIBUTION_PARAMS = {
 }
 
 
+def set_dim_names(datasets: dict):
+    """
+    Makes sure latitude, longitude and time dimensions are present. These are set to be named
+    lat, lon, time if not already. Will assume a matching dimension if lat, lon, or time is in
+    the respective dimension name.
+
+    Parameters
+    ----------
+    datasets: dict
+        Dictionary of datasets which will have their variables renamed if necessary
+    """
+    # For each of the datasets rename the dimensions
+    for data_name, data in datasets.items():
+        for key in data.dims:
+            if 'lat' in key.lower():
+                datasets[data_name] = data.swap_dims({key: 'lat'})
+            elif 'lon' in key.lower():
+                datasets[data_name] = data.swap_dims({key: 'lon'})
+            elif 'time' in key.lower():
+                datasets[data_name] = data.swap_dims({key: 'time'})
+
+    # Make sure each required dimension is in each dataset
+    for data_name, data in datasets.items():
+        msg = f'{data_name} needs a latitude, longitude and time dimension'
+        assert all(i in data.dims for i in ['lat', 'lon', 'time']), msg
+
+    return datasets
+
+
 def ma2a(a, raise_error: bool = False):
     """
     Turns masked array into array, replacing missing values and infs by nans.
@@ -461,15 +490,15 @@ def chunk_indexes(chunk_sizes):
     return lat_indexes, lon_indexes
 
 
-def time_scraping(adjustment):
+def time_scraping(datasets: dict):
     """
     Function that turns the time variables for each input dataset into arrays
     of days of the year, month number, and year.
 
     Parameters
     __________
-    adjustment: Adjustment
-        Bias adjustment object that holds the input datasets
+    datasets: dict
+        Dictionary of xarray datasets
 
     Returns
     -------
@@ -480,31 +509,15 @@ def time_scraping(adjustment):
     years: dict
         Dictionary of numpy arrays that give the year for each obs in each dataset
     """
-    # Scraping the time from the data and turning into pandas date time array
-    dates_obs_hist = pd.DatetimeIndex(adjustment.obs_hist['time'].values)
-    dates_sim_hist = pd.DatetimeIndex(adjustment.sim_hist['time'].values)
-    dates_sim_fut = pd.DatetimeIndex(adjustment.sim_fut['time'].values)
+    # Empty output dictionaries
+    days, month_numbers, years = {}, {}, {}
 
-    # Getting the month for each observation
-    month_numbers = {
-        'obs_hist': dates_obs_hist.month,
-        'sim_hist': dates_sim_hist.month,
-        'sim_fut': dates_sim_fut.month
-    }
-
-    # Getting the year for each observation
-    years = {
-        'obs_hist': dates_obs_hist.year,
-        'sim_hist': dates_sim_hist.year,
-        'sim_fut': dates_sim_fut.year
-    }
-
-    # Getting the day of the year for each observation
-    days = {
-        'obs_hist': dates_obs_hist.day_of_year,
-        'sim_hist': dates_sim_hist.day_of_year,
-        'sim_fut': dates_sim_fut.day_of_year
-    }
+    # Iterate through each dataset in dictionary and get data
+    for key, value in datasets.items():
+        dates = pd.DatetimeIndex(value['time'].values)
+        days[key] = dates.day_of_year
+        month_numbers[key] = dates.month
+        years[key] = dates.year
 
     return days, month_numbers, years
 
