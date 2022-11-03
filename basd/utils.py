@@ -551,14 +551,14 @@ def sample_invalid_values(a, seed=None, if_all_invalid_use=np.nan, warn=False):
     """
     # make sure types and shapes of a and if_all_invalid_use fit
     space_shape = a.shape[1:]
-    if len(space_shape):
-        msg = 'expected if_all_invalid_use to be an array'
-        assert isinstance(if_all_invalid_use, np.ndarray), msg
-        msg = 'shapes of a and if_all_invalid_use do not fit'
-        assert if_all_invalid_use.shape == space_shape, msg
-    else:
-        msg = 'expected if_all_invalid_use to be scalar'
-        assert np.isscalar(if_all_invalid_use), msg
+    # if len(space_shape):
+    #     msg = 'expected if_all_invalid_use to be an array'
+    #     assert isinstance(if_all_invalid_use, np.ndarray), msg
+    #     msg = 'shapes of a and if_all_invalid_use do not fit'
+    #     assert if_all_invalid_use.shape == space_shape, msg
+    # else:
+    #     msg = 'expected if_all_invalid_use to be scalar'
+    #     assert np.isscalar(if_all_invalid_use), msg
 
     # assert that 'a' is a masked array
     if isinstance(a, np.ma.MaskedArray):
