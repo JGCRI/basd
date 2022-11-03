@@ -10,7 +10,8 @@ import basd.sd_utils as sdu
 
 
 class StatisticalDownscalingTest(unittest.TestCase):
-    DATA_PATH = '../data'
+    THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATA_PATH = os.path.join(THIS_DIR, '../data')
     PR_OBS_HIST = xr.open_dataset(os.path.join(DATA_PATH,
                                                'pr_obs-hist_fine_1979-2014.nc'))
     PR_SIM_FUT = xr.open_dataset(os.path.join(DATA_PATH,
