@@ -42,3 +42,38 @@ def match_grids(obs_hist: xr.Dataset, sim_hist: xr.Dataset, sim_fut: xr.Dataset)
     obs_hist_resized = obs_hist_resized_xy.rename({'x': 'lon', 'y': 'lat'})
 
     return obs_hist_resized
+
+
+def interpolate_for_downscaling(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
+    """
+    Function for interpolating the simulated coarse data to the finer observational data
+    resolution. Effectivley the opposite of the match_grids function
+
+    Parameters
+    ----------
+    obs_fine: xr.Dataset
+        Observational data at fine resolution
+    sim_coarse: xr.Dataset
+        Simulated data at coarse resolution
+
+    Returns
+    -------
+    sim_fine: xr.Dataset
+        Observational data resized to match simulated data
+    """
+    # Assert the coordinate reference system. Assumes CRS known by code ESPG:4326
+    obs_fine.rio.write_crs(4326, inplace=True)
+    sim_coarse.rio.write_crs(4326, inplace=True)
+
+    # Temporarily renaming (lon, lat) --> (x, y) and ordering dimensions as time, y, x
+    obs_fine_xy = obs_fine.rename({'lon': 'x', 'lat': 'y'}).transpose('time', 'y', 'x', ...)
+    sim_coarse_xy = sim_coarse.rename({'lon': 'x', 'lat': 'y'}).transpose('time', 'y', 'x', ...)
+
+    # Project observational data onto simulated resolution
+    sim_fine_xy = sim_coarse_xy.rio.reproject_match(obs_fine_xy,
+                                                    resampling=Resampling.bilinear)
+
+    # Revert coord named to lat, lon
+    sim_fine = sim_fine_xy.rename({'x': 'lon', 'y': 'lat'})
+
+    return sim_fine
