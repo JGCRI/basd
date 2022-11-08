@@ -106,12 +106,12 @@ def weighted_sum_preserving_mbcn(obs_fine, sim_coarse, sim_fine,
     sum_weights = sum_weights / np.sqrt(np.sum(np.square(sum_weights)))
 
     # Initial coarse value
-    print(f'Initial Coarse Value: {sim_coarse[0]}')
-    print(f'Initial Agg fine value: {np.dot(sim_fine, sum_weights)[0]}')
+    # print(f'Initial Coarse Value: {sim_coarse[0]}')
+    # print(f'Initial Agg fine value: {np.dot(sim_fine, sum_weights)[0]}')
 
     # rescale x_sim_coarse for initial step of algorithm
-    #sim_coarse = sim_coarse * np.sum(sum_weights)
-    print(f'Initial Coarse Value Scaled: {sim_coarse[0]}')
+    # sim_coarse = sim_coarse * np.sum(sum_weights)
+    # print(f'Initial Coarse Value Scaled: {sim_coarse[0]}')
 
     # Need to iterate at least twice (one rotation, and then reversing that rotation)
     # Will iterate additionally however many extra rotation matrices are provided
@@ -125,6 +125,7 @@ def weighted_sum_preserving_mbcn(obs_fine, sim_coarse, sim_fine,
 
         # On the last iteration
         elif i == n_loops - 1:
+            # Step 3c.1 in <https://doi.org/10.5194/gmd-12-3055-2019>
             # rotate back to original axes for last qm
             o = o_total.T
 
@@ -176,20 +177,20 @@ def weighted_sum_preserving_mbcn(obs_fine, sim_coarse, sim_fine,
             sim_fine -= np.outer(np.dot(
                 sim_fine - x_sim_previous, sum_weights), sum_weights)
 
-        print(f'Agg fine value at iteration {i}: {np.dot(sim_fine, sum_weights)[0]}')
+        # print(f'Agg fine value at iteration {i}: {np.dot(sim_fine, sum_weights)[0]}')
 
     return sim_fine
 
 
-def generate_rotation_matrix_fixed_first_axis(sum_weights, transpose=False):
+def generate_rotation_matrix_fixed_first_axis(v, transpose=False):
     """
         Generates an n x n orthogonal matrix whose first row or column is equal to
-         v/|v|, and whose other rows or columns are found by Gram-Schmidt
-        orthogonalisation of v and the standard unit vectors except the first.
+        v, a unit vector, and whose other rows or columns are found by Gram-Schmidt
+        orthogonalization of sum_weights and the standard unit vectors except the first.
 
         Parameters
         ----------
-        sum_weights: (n,) array
+        v: (n,) array
             Array of n non-zero numbers.
         transpose: boolean, optional
             If True/False generate an n x n orthogonal matrix whose first row/column
@@ -200,13 +201,14 @@ def generate_rotation_matrix_fixed_first_axis(sum_weights, transpose=False):
         m: (n,n) ndarray
             Rotation matrix.
         """
-    assert np.all(sum_weights > 0), 'all elements of v have to be positive'
+    assert np.all(v > 0), 'all elements of v have to be positive'
 
     # generate matrix of vectors that span the R^n with v being the first vector
-    a = np.diag(np.ones_like(sum_weights))
-    a[:, 0] = sum_weights
+    a = np.diag(np.ones_like(v))
+    a[:, 0] = v
 
-    # use QR decomposition for Gram-Schmidt orthogonalisation of these vectors
-    q, r = spl.qr(a)
+    # use QR decomposition for Gram-Schmidt orthogonalization of these vectors
+    qr = spl.qr(a)
+    q = qr[0]
 
     return -q.T if transpose else -q
