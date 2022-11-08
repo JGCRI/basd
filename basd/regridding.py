@@ -1,5 +1,6 @@
 from rasterio.enums import Resampling
 
+import numpy as np
 import xarray as xr
 
 
@@ -24,7 +25,6 @@ def match_grids(obs_hist: xr.Dataset, sim_hist: xr.Dataset, sim_fut: xr.Dataset)
     obs_hist_resized: xr.Dataset
         Observational data resized to match simulated data
     """
-    # TODO: Allow coordinate system to be specified
     # Assert the coordinate reference system. Assumes CRS known by code ESPG:4326
     obs_hist.rio.write_crs(4326, inplace=True)
     sim_hist.rio.write_crs(4326, inplace=True)
@@ -47,7 +47,7 @@ def match_grids(obs_hist: xr.Dataset, sim_hist: xr.Dataset, sim_fut: xr.Dataset)
 def interpolate_for_downscaling(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
     """
     Function for interpolating the simulated coarse data to the finer observational data
-    resolution. Effectivley the opposite of the match_grids function
+    resolution. Effectively the opposite of the match_grids function
 
     Parameters
     ----------
@@ -62,8 +62,8 @@ def interpolate_for_downscaling(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
         Observational data resized to match simulated data
     """
     # Assert the coordinate reference system. Assumes CRS known by code ESPG:4326
-    obs_fine.rio.write_crs(4326, inplace=True)
-    sim_coarse.rio.write_crs(4326, inplace=True)
+    obs_fine = obs_fine.rio.write_crs(4326)
+    sim_coarse = sim_coarse.rio.write_crs(4326)
 
     # Temporarily renaming (lon, lat) --> (x, y) and ordering dimensions as time, y, x
     obs_fine_xy = obs_fine.rename({'lon': 'x', 'lat': 'y'}).transpose('time', 'y', 'x', ...)
@@ -77,3 +77,54 @@ def interpolate_for_downscaling(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
     sim_fine = sim_fine_xy.rename({'x': 'lon', 'y': 'lat'})
 
     return sim_fine
+
+
+def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
+    """
+    Re-projects grids if necessary so that downscaling factors are positive integers
+
+    Parameters
+    ----------
+    obs_fine: xr.Dataset
+        Observational data at fine resolution
+    sim_coarse: xr.Dataset
+        Simulated data at coarse resolution
+
+    Returns
+    -------
+    sim_coarse: xr.Dataset
+        Simulated data at coarse resolution, now an even factor or obs_fine
+    """
+    # Coordinate sequences
+    fine_lats = obs_fine.coords['lat'].values
+    fine_lons = obs_fine.coords['lon'].values
+    coarse_lats = sim_coarse.coords['lat'].values
+    coarse_lons = sim_coarse.coords['lon'].values
+
+    # Get the downscaling factors
+    f_lat = len(fine_lats) / len(coarse_lats)
+    f_lon = len(fine_lons) / len(coarse_lons)
+
+    # If integers already, return
+    if isinstance(f_lat, int) & isinstance(f_lon, int):
+        return obs_fine, sim_coarse
+
+    # Else, get the
+    f_lat = len(fine_lats) // len(coarse_lats)
+    f_lon = len(fine_lons) // len(coarse_lons)
+
+    # Assert the coordinate reference system. Assumes CRS known by code ESPG:4326
+    sim_coarse.rio.write_crs(4326, inplace=True)
+
+    # Temporarily renaming (lon, lat) --> (x, y) and ordering dimensions as time, y, x
+    sim_coarse_xy = sim_coarse.rename({'lon': 'x', 'lat': 'y'}).transpose('time', 'y', 'x', ...)
+
+    # Project data with new shape
+    sim_coarse_xy = sim_coarse_xy.rio.reproject(dst_crs="EPSG:4326",
+                                                shape=(len(fine_lats) // f_lat, len(fine_lons) // f_lon))
+
+    # Rename variables
+    sim_coarse = sim_coarse_xy.rename({'x': 'lon', 'y': 'lat'})
+
+    # return
+    return sim_coarse
