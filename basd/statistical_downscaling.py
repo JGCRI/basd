@@ -52,13 +52,14 @@ class Downscaler:
         self.sim_coarse = self.datasets['sim_coarse']
         self.sim_fine = self.datasets['sim_fine']
 
-        # Analyze input grids
-        self.downscaling_factors, self.circular, self.ascending = self.analyze_input_grids()
-
         # TODO: Perhaps move the sum_weights and CRE_matrix generation to the downscaling function
         #       rather than happening on init.
 
         # TODO: Actually figure out the remapping/resolution matching process
+        self.sim_coarse = rg.reproject_for_integer_factors(self.obs_fine, self.sim_coarse)
+
+        # Analyze input grids
+        self.downscaling_factors = self.analyze_input_grids()
 
         # Set downscaled grid as copy of fine grid for now
         self.sim_fine = rg.interpolate_for_downscaling(obs_fine, sim_coarse)
@@ -89,8 +90,6 @@ class Downscaler:
         Returns
         -------
         downscaling_factors: dict
-        ascending: dict
-        circular: dict
         """
         # Coordinate sequences
         fine_lats = self.obs_fine.coords['lat'].values
@@ -129,26 +128,13 @@ class Downscaler:
         assert np.all(coarse_lon_deltas == coarse_lon_deltas[0]) and np.all(
             fine_lon_deltas == fine_lon_deltas[0]), f'Resolution should be constant for all longitude'
 
-        # Determine if sequences are circular
-        circular = {
-            'lat': False,
-            'lon': np.allclose(coarse_lons[0] - coarse_lon_deltas[0] + 360 * np.sign(coarse_lon_deltas[0]),
-                               coarse_lons[-1])
-        }
-
-        # Determine if sequences are increasing
-        ascending = {
-            'lat': coarse_lat_deltas[0] > 0,
-            'lon': coarse_lon_deltas[0] > 0
-        }
-
         # Save the scaling factors
         scale_factors = {
             'lat': f_lat,
             'lon': f_lon
         }
 
-        return scale_factors, circular, ascending
+        return scale_factors
 
     def grid_cell_weights(self):
         """
