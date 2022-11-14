@@ -289,10 +289,10 @@ def get_data_at_loc(loc, variable,
     sum_weights_loc = sum_weights[lat_indexes].repeat(downscaling_factors['lon'])
 
     # Value of fine observational cells
-    obs_fine_values = obs_fine['pr'][dict(lat=lat_indexes, lon=lon_indexes)].values
+    obs_fine_values = obs_fine[variable][dict(lat=lat_indexes, lon=lon_indexes)].values
 
     # Values of fine simulated cells
-    sim_fine_values = sim_fine['pr'][dict(lat=lat_indexes, lon=lon_indexes)].values
+    sim_fine_values = sim_fine[variable][dict(lat=lat_indexes, lon=lon_indexes)].values
 
     # reshape. (lat, lon, time) --> (time, lat x lon) ex.) [4 x 4 x 365] --> [365 x 16]
     # Spreads fine cell at single time point, first along row then cols.
