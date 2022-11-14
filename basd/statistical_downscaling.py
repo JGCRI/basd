@@ -62,7 +62,7 @@ class Downscaler:
         self.downscaling_factors = self.analyze_input_grids()
 
         # Set downscaled grid as copy of fine grid for now
-        self.sim_fine = rg.interpolate_for_downscaling(obs_fine, sim_coarse)
+        self.sim_fine = rg.interpolate_for_downscaling(self.obs_fine, self.sim_coarse)
 
         # Update dictionary
         self.datasets['sim_fine'] = self.sim_fine
@@ -123,10 +123,10 @@ class Downscaler:
                                                                                 f'monotonic in the same direction.'
 
         # Assert a constant delta in sequences
-        assert np.all(coarse_lat_deltas == coarse_lat_deltas[0]) and np.all(
-            fine_lat_deltas == fine_lat_deltas[0]), f'Resolution should be constant for all latitude'
-        assert np.all(coarse_lon_deltas == coarse_lon_deltas[0]) and np.all(
-            fine_lon_deltas == fine_lon_deltas[0]), f'Resolution should be constant for all longitude'
+        assert np.allclose(coarse_lat_deltas, coarse_lat_deltas[0]) and np.allclose(
+            fine_lat_deltas, fine_lat_deltas[0]), f'Resolution should be constant for all latitude'
+        assert np.allclose(coarse_lon_deltas, coarse_lon_deltas[0]) and np.allclose(
+            fine_lon_deltas, fine_lon_deltas[0]), f'Resolution should be constant for all longitude'
 
         # Save the scaling factors
         scale_factors = {
@@ -199,7 +199,7 @@ class Downscaler:
 
         return result
 
-    def downscale(self, n_jobs: int = 1):
+    def downscale(self, n_jobs: int = 1, path: str=None):
         # Get days, months and years data
         days, month_numbers, years = util.time_scraping(self.datasets)
 
@@ -226,6 +226,9 @@ class Downscaler:
             # reorder the dimensions
             self.sim_fine[self.variable][dict(lat=lat_indexes, lon=lon_indexes)].values = \
                 results[i].transpose((2, 0, 1))
+
+        if path:
+            self.save_downscale_nc(path)
 
         return self.sim_fine
 

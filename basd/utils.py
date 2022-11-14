@@ -608,7 +608,7 @@ def sample_invalid_values(a, seed=None, if_all_invalid_use=np.nan, warn=False):
         for i in np.ndindex(space_shape):
             j = (slice(None, None),) + i
             d_replaced[j] = sample_invalid_values_core(
-                d[j], seed, if_all_invalid_use[i], warn, l_invalid[j])
+                d[j], seed, if_all_invalid_use, warn, l_invalid[j])
     else:
         d_replaced = sample_invalid_values_core(
             d, seed, if_all_invalid_use, warn, l_invalid)
