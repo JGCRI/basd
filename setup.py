@@ -37,7 +37,8 @@ setup(
         "rioxarray",
         "scipy",
         "seaborn",
-        "xarray"
+        "xarray",
+        "xesmf"
     ],
     extras_require={
         'dev': [
