@@ -25,7 +25,7 @@ jobs:
 
         - name: Install dependencies
           run: |
-            $CONDA/bin/conda install xesmf
+            $CONDA/bin/conda install -c conda-forge xesmf
             python -m pip install --upgrade pip
             python setup.py install
         - name: Test and generate coverage report on Linux
