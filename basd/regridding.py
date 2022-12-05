@@ -2,6 +2,7 @@ from rasterio.enums import Resampling
 from functools import reduce
 from math import sqrt
 
+import numpy as np
 import xarray as xr
 import xesmf
 
@@ -131,10 +132,16 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
     lat_b2 = float(obs_fine.lat[-1]) + fine_lat_delta / 2
     lon_b1 = float(obs_fine.lon[0]) - fine_lon_delta / 2
     lon_b2 = float(obs_fine.lon[-1]) + fine_lon_delta / 2
+    coarse_lat_delta = f_lat * fine_lat_delta
+    coarse_lon_delta = f_lon * fine_lon_delta
+    new_lats = np.arange(lat_b1 + coarse_lat_delta / 2, lat_b2 - coarse_lat_delta / 2, f_lat * fine_lat_delta)
+    new_lons = np.arange(lon_b1 + coarse_lon_delta / 2, lon_b2 - coarse_lon_delta / 2, f_lon * fine_lon_delta)
+
+    new_grid = xr.Dataset({'lat': new_lats, 'lon': new_lons})
 
     # Create new sequence of coordinates for xesmf regridder
-    new_grid = xesmf.util.grid_2d(lon_b1, lon_b2, f_lon * fine_lon_delta,
-                                  lat_b1, lat_b2, f_lat * fine_lat_delta)
+    #new_grid = xesmf.util.grid_2d(lon_b1, lon_b2, f_lon * fine_lon_delta,
+    #                              lat_b1, lat_b2, f_lat * fine_lat_delta)
 
     # Do the regridding and save as new coarse dataset
     coarse_to_finer_regridder = xesmf.Regridder(sim_coarse, new_grid, 'bilinear', periodic=True)
