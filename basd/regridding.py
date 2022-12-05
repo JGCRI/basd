@@ -1,8 +1,15 @@
 from rasterio.enums import Resampling
+from functools import reduce
+from math import sqrt
 
-import numpy as np
 import xarray as xr
+import xesmf
 
+
+def factors(n):
+    step = 2 if n % 2 else 1
+    return set(reduce(list.__add__,
+                      ([i, n // i] for i in range(1, int(sqrt(n)) + 1, step) if n % i == 0)))
 
 # TODO: Eventually we will want to look into methods using xESMF package based on the ESMF
 #   tools. But we should always include the option to use rioxarray, as xESMF is not compatible
@@ -79,7 +86,7 @@ def interpolate_for_downscaling(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
     return sim_fine
 
 
-def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
+def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, variable: str):
     """
     Re-projects grids if necessary so that downscaling factors are positive integers
 
@@ -89,6 +96,8 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
         Observational data at fine resolution
     sim_coarse: xr.Dataset
         Simulated data at coarse resolution
+    variable: str
+        The variable to be reprojected
 
     Returns
     -------
@@ -109,22 +118,62 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
     if isinstance(f_lat, int) & isinstance(f_lon, int):
         return obs_fine, sim_coarse
 
-    # Else, get the
-    f_lat = len(fine_lats) // len(coarse_lats)
-    f_lon = len(fine_lons) // len(coarse_lons)
+    # Else, get the nearest integer factor that divides the grid evenly
+    lat_facts = factors(len(fine_lats))
+    lon_facts = factors(len(fine_lons))
+    f_lat = [x for x in lat_facts if x < f_lat][-1]
+    f_lon = [x for x in lon_facts if x < f_lon][-1]
 
-    # Assert the coordinate reference system. Assumes CRS known by code ESPG:4326
-    sim_coarse.rio.write_crs(4326, inplace=True)
+    # Find bounds
+    fine_lat_delta = float(obs_fine.lat[1] - obs_fine.lat[0])
+    fine_lon_delta = float(obs_fine.lon[1] - obs_fine.lon[0])
+    lat_b1 = float(obs_fine.lat[0]) - fine_lat_delta / 2
+    lat_b2 = float(obs_fine.lat[-1]) + fine_lat_delta / 2
+    lon_b1 = float(obs_fine.lon[0]) - fine_lon_delta / 2
+    lon_b2 = float(obs_fine.lon[-1]) + fine_lon_delta / 2
 
-    # Temporarily renaming (lon, lat) --> (x, y) and ordering dimensions as time, y, x
-    sim_coarse_xy = sim_coarse.rename({'lon': 'x', 'lat': 'y'}).transpose('time', 'y', 'x', ...)
+    # Create new sequence of coordinates for xesmf regridder
+    new_grid = xesmf.util.grid_2d(lon_b1, lon_b2, f_lon * fine_lon_delta,
+                                  lat_b1, lat_b2, f_lat * fine_lat_delta)
 
-    # Project data with new shape
-    sim_coarse_xy = sim_coarse_xy.rio.reproject(dst_crs="EPSG:4326",
-                                                shape=(len(fine_lats) // f_lat, len(fine_lons) // f_lon))
+    # Do the regridding and save as new coarse dataset
+    coarse_to_finer_regridder = xesmf.Regridder(sim_coarse, new_grid, 'bilinear', periodic=True)
+    sim_coarse_arr = coarse_to_finer_regridder(sim_coarse[variable])
+    sim_coarse = xr.Dataset({variable: sim_coarse_arr})
 
-    # Rename variables
-    sim_coarse = sim_coarse_xy.rename({'x': 'lon', 'y': 'lat'})
-
-    # return
     return sim_coarse
+
+
+def project_onto(to_project: xr.Dataset, template: xr.Dataset, variable: str):
+    """
+    Reprojects one dataset to have the same coordinates of the template.
+
+    Parameters
+    ----------
+    to_project: xr.Dataset
+        xarray Dataset which we wish to change resolution/coordinates
+    template: xr.Dataset
+        xarray Dataset whose coordinates are being used as a template to match to
+    variable: str
+        Name of the dataset variable of interest
+
+    Returns
+    -------
+    projected_dataset: xr.Dataset
+        xarray Dataset which is the original dataset to project,
+        bilinearly interpolated to match the coordinates of the template data
+    """
+
+    # Get the lat/lon coordinate sequences as template
+    template_coords = xr.Dataset(coords=template.coords).drop_vars(['time', 'time_bnds'])
+
+    # Create regridding object from xesmf
+    regridder = xesmf.Regridder(to_project, template_coords)
+
+    # Do the regridding, result is a xr.DataArray
+    projected_array = regridder(to_project[variable])
+
+    # Create new dataset object
+    projected_dataset = xr.Dataset({variable: projected_array})
+
+    return projected_dataset

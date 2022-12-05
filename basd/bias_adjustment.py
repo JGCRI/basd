@@ -43,7 +43,8 @@ class Adjustment:
 
         # Maps observational data onto simulated data grid resolution
         if remap_grid:
-            self.obs_hist = rg.match_grids(self.obs_hist, self.sim_hist, self.sim_fut)
+            # self.obs_hist = rg.match_grids(self.obs_hist, self.sim_hist, self.sim_fut)
+            self.obs_hist = rg.project_onto(self.obs_hist, self.sim_hist, self.variable)
             self.datasets['obs_hist'] = self.obs_hist
 
         # Forces data to have same spatial shape and resolution
@@ -274,8 +275,8 @@ class Adjustment:
             # Chunk to work on
             chunks = np.ndindex(len(lat_indexes), len(lon_indexes))
 
-            chunked_results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10) \
-                (delayed(adjust_bias_chunk)(
+            chunked_results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10)(
+                delayed(adjust_bias_chunk)(
                     self.obs_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
                     self.sim_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
                     self.sim_fut[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
@@ -292,8 +293,8 @@ class Adjustment:
             i_locations = np.ndindex(self.sizes['lat'], self.sizes['lon'])
 
             # Find and save results into adjusted DataSet
-            results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10) \
-                (delayed(adjust_bias_one_location_parallel)(
+            results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10)(
+                delayed(adjust_bias_one_location_parallel)(
                     self.obs_hist[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
                     self.sim_hist[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
                     self.sim_fut[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
@@ -425,12 +426,19 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
     Parameters
     ----------
     obs_hist_loc: xr.DataArray
+        Observational data at given location
     sim_hist_loc: xr.DataArray
+        Historical simulated data at given location
     sim_fut_loc: xr.DataArray
+        Future simulated data at given location
     params: Parameters
+        Object that defines BA parameters
     days: dict
+        Arrays of day of month for each data input
     month_numbers: dict
+        Arrays of month number for each data input
     years: dict
+        Arrays of year for each data input
 
     Returns
     -------

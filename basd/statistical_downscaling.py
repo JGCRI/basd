@@ -56,16 +56,18 @@ class Downscaler:
         #       rather than happening on init.
 
         # TODO: Actually figure out the remapping/resolution matching process
-        self.sim_coarse = rg.reproject_for_integer_factors(self.obs_fine, self.sim_coarse)
+        self.sim_coarse = rg.reproject_for_integer_factors(self.obs_fine, self.sim_coarse, self.variable)
 
         # Analyze input grids
         self.downscaling_factors = self.analyze_input_grids()
 
         # Set downscaled grid as copy of fine grid for now
-        self.sim_fine = rg.interpolate_for_downscaling(self.obs_fine, self.sim_coarse)
+        # self.sim_fine = rg.interpolate_for_downscaling(self.obs_fine, self.sim_coarse)
+        self.sim_fine = rg.project_onto(self.sim_coarse, self.obs_fine, self.variable)
 
         # Update dictionary
         self.datasets['sim_fine'] = self.sim_fine
+        self.datasets['sim_coarse'] = self.sim_coarse
 
         # Grid cell weights by global area
         sum_weights = self.grid_cell_weights()
@@ -199,7 +201,7 @@ class Downscaler:
 
         return result
 
-    def downscale(self, n_jobs: int = 1, path: str=None):
+    def downscale(self, n_jobs: int = 1, path: str = None):
         # Get days, months and years data
         days, month_numbers, years = util.time_scraping(self.datasets)
 
@@ -207,8 +209,8 @@ class Downscaler:
         i_locations = np.ndindex(self.coarse_sizes['lat'], self.coarse_sizes['lon'])
 
         # Find and save results into adjusted DataSet
-        results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10) \
-            (delayed(downscale_one_location_parallel)(
+        results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10)(
+            delayed(downscale_one_location_parallel)(
                 dict(lat=i_loc[0], lon=i_loc[1]), self.variable, self.params,
                 self.obs_fine, self.sim_coarse, self.sim_fine,
                 month_numbers, self.downscaling_factors, self.sum_weights,
