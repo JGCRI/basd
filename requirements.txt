@@ -11,4 +11,3 @@ rioxarray
 scipy
 seaborn
 xarray
-xesmf

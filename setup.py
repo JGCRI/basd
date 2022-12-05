@@ -37,12 +37,12 @@ setup(
         "rioxarray",
         "scipy",
         "seaborn",
-        "xarray",
-        "xesmf"
+        "xarray"
     ],
     extras_require={
         'dev': [
-            "plotly"
+            "plotly",
+            "xesmf"
         ]
     }
 )
