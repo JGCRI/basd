@@ -176,7 +176,7 @@ def project_onto(to_project: xr.Dataset, template: xr.Dataset, variable: str):
     """
 
     # Get the lat/lon coordinate sequences as template
-    template_coords = xr.Dataset(coords=template.coords).drop_vars(['time', 'time_bnds'])
+    template_coords = xr.Dataset(coords={'lat': template.lat, 'lon': template.lon})
 
     # Create regridding object from xesmf
     regridder = xesmf.Regridder(to_project, template_coords)
