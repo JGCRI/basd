@@ -155,7 +155,7 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
     return sim_coarse
 
 
-def project_onto(to_project: xr.Dataset, template: xr.Dataset, variable: str):
+def project_onto(to_project: xr.Dataset, template: xr.Dataset, variable: str, periodic: bool = True):
     """
     Reprojects one dataset to have the same coordinates of the template.
 
@@ -167,6 +167,8 @@ def project_onto(to_project: xr.Dataset, template: xr.Dataset, variable: str):
         xarray Dataset whose coordinates are being used as a template to match to
     variable: str
         Name of the dataset variable of interest
+    periodic: bool, True
+        Whether longitude coordinates are periodic
 
     Returns
     -------
@@ -179,7 +181,7 @@ def project_onto(to_project: xr.Dataset, template: xr.Dataset, variable: str):
     template_coords = xr.Dataset(coords={'lat': template.lat, 'lon': template.lon})
 
     # Create regridding object from xesmf
-    regridder = xesmf.Regridder(to_project, template_coords)
+    regridder = xesmf.Regridder(to_project, template_coords, 'bilinear', periodic=periodic)
 
     # Do the regridding, result is a xr.DataArray
     projected_array = regridder(to_project[variable])
