@@ -134,8 +134,12 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
     lon_b2 = float(obs_fine.lon[-1]) + fine_lon_delta / 2
     coarse_lat_delta = f_lat * fine_lat_delta
     coarse_lon_delta = f_lon * fine_lon_delta
-    new_lats = np.arange(lat_b1 + coarse_lat_delta / 2, lat_b2 - coarse_lat_delta / 2, f_lat * fine_lat_delta)
-    new_lons = np.arange(lon_b1 + coarse_lon_delta / 2, lon_b2 - coarse_lon_delta / 2, f_lon * fine_lon_delta)
+    new_lats = np.arange(lat_b1 + coarse_lat_delta / 2,
+                         lat_b2 - coarse_lat_delta / 2 + f_lat * fine_lat_delta / 2,
+                         f_lat * fine_lat_delta)
+    new_lons = np.arange(lon_b1 + coarse_lon_delta / 2,
+                         lon_b2 - coarse_lon_delta / 2 + f_lon * fine_lon_delta / 2,
+                         f_lon * fine_lon_delta)
 
     new_grid = xr.Dataset({'lat': new_lats, 'lon': new_lons})
 
