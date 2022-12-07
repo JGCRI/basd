@@ -209,10 +209,19 @@ class Downscaler:
         i_locations = np.ndindex(self.coarse_sizes['lat'], self.coarse_sizes['lon'])
 
         # Find and save results into adjusted DataSet
+        # results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10)(
+        #     delayed(downscale_one_location_parallel)(
+        #         dict(lat=i_loc[0], lon=i_loc[1]), self.variable, self.params,
+        #         self.obs_fine, self.sim_coarse, self.sim_fine,
+        #         month_numbers, self.downscaling_factors, self.sum_weights,
+        #         self.rotation_matrices) for i_loc in i_locations)
+
         results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10)(
             delayed(downscale_one_location_parallel)(
-                dict(lat=i_loc[0], lon=i_loc[1]), self.variable, self.params,
-                self.obs_fine, self.sim_coarse, self.sim_fine,
+                get_data_at_loc(dict(lat=i_loc[0], lon=i_loc[1]), self.variable,
+                                self.obs_fine, self.sim_coarse, self.sim_fine,
+                                month_numbers, self.downscaling_factors, self.sum_weights),
+                self.variable, self.params,
                 month_numbers, self.downscaling_factors, self.sum_weights,
                 self.rotation_matrices) for i_loc in i_locations)
 
@@ -310,9 +319,70 @@ def get_data_at_loc(loc, variable,
     return data, sum_weights_loc
 
 
-def downscale_one_location_parallel(loc, variable, params,
-                                    obs_fine, sim_coarse, sim_fine,
-                                    month_numbers, downscaling_factors, sum_weights,
+# def downscale_one_location_parallel(loc, variable, params,
+#                                     obs_fine, sim_coarse, sim_fine,
+#                                     month_numbers, downscaling_factors, sum_weights,
+#                                     rotation_matrices):
+#     """
+#     Downscales a single coarse grid cell to the resolution of the fine observational grid,
+#     at the given location.
+#
+#     Parameters
+#     ----------
+#     rotation_matrices
+#     params
+#     sum_weights
+#     downscaling_factors
+#     sim_fine
+#     variable
+#     loc
+#     month_numbers
+#     obs_fine: np.Array
+#         Observational data at fine resolution contained in the given coarse cell
+#     sim_coarse: np.Array
+#         Simulated data at coarse resolution at the given location
+#
+#     Returns
+#     -------
+#     sim_fine_loc: ndarray
+#         3D array of downscaled coarse grid. Size is latitude scaling factor by longitude scaling
+#         factor by time
+#     """
+#
+#     # Get data at location
+#     data, sum_weights_loc = get_data_at_loc(loc, variable,
+#                                             obs_fine, sim_coarse, sim_fine,
+#                                             month_numbers, downscaling_factors, sum_weights)
+#
+#     # abort here if there are only missing values in at least one time series
+#     # do not abort though if the if_all_invalid_use option has been specified
+#     if np.isnan(params.if_all_invalid_use):
+#         if sdu.only_missing_values_in_at_least_one_time_series(data):
+#             warnings.warn(f'{loc} skipped due to missing data')
+#             return None
+#
+#     # compute mean value over all time steps for invalid value sampling
+#     long_term_mean = {}
+#     for key, d in data.items():
+#         long_term_mean[key] = util.average_valid_values(d, params.if_all_invalid_use,
+#                                                         params.lower_bound, params.lower_threshold,
+#                                                         params.upper_bound, params.upper_threshold)
+#
+#     # Result in flattened format
+#     result = downscale_month_by_month(data, sum_weights_loc,
+#                                       long_term_mean, month_numbers,
+#                                       rotation_matrices, params)
+#
+#     # Reshape to grid
+#     result = result.T.reshape((downscaling_factors['lat'],
+#                                downscaling_factors['lon'],
+#                                month_numbers['sim_fine'].size))
+#
+#     return result
+
+def downscale_one_location_parallel(loc, params,
+                                    data_weights,
+                                    month_numbers, downscaling_factors,
                                     rotation_matrices):
     """
     Downscales a single coarse grid cell to the resolution of the fine observational grid,
@@ -322,16 +392,10 @@ def downscale_one_location_parallel(loc, variable, params,
     ----------
     rotation_matrices
     params
-    sum_weights
+    data_weights
     downscaling_factors
-    sim_fine
-    variable
     loc
     month_numbers
-    obs_fine: np.Array
-        Observational data at fine resolution contained in the given coarse cell
-    sim_coarse: np.Array
-        Simulated data at coarse resolution at the given location
 
     Returns
     -------
@@ -341,9 +405,7 @@ def downscale_one_location_parallel(loc, variable, params,
     """
 
     # Get data at location
-    data, sum_weights_loc = get_data_at_loc(loc, variable,
-                                            obs_fine, sim_coarse, sim_fine,
-                                            month_numbers, downscaling_factors, sum_weights)
+    data, sum_weights_loc = data_weights
 
     # abort here if there are only missing values in at least one time series
     # do not abort though if the if_all_invalid_use option has been specified
