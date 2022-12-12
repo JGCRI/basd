@@ -12,9 +12,7 @@ def factors(n):
     return set(reduce(list.__add__,
                       ([i, n // i] for i in range(1, int(sqrt(n)) + 1, step) if n % i == 0)))
 
-# TODO: Eventually we will want to look into methods using xESMF package based on the ESMF
-#   tools. But we should always include the option to use rioxarray, as xESMF is not compatible
-#   with windows OS.
+
 def match_grids(obs_hist: xr.Dataset, sim_hist: xr.Dataset, sim_fut: xr.Dataset):
     """
     Function which remaps the observational data to the simulated data spatial resolution

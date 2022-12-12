@@ -243,7 +243,7 @@ class Adjustment:
         return result
 
     def adjust_bias(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                    n_jobs: int = 1, path: str = None):
+                    n_jobs: int = 1, path: str = None, years_per_chunk: int = None):
         """
         Does bias adjustment at every location of input data
 
@@ -255,6 +255,8 @@ class Adjustment:
             Path to save NetCDF output. If None, return result but don't create file
         lat_chunk_size: int
         lon_chunk_size: int
+        years_per_chunk: int
+            Optional number of years to include per netCDF file
 
         Returns
         -------
@@ -310,11 +312,11 @@ class Adjustment:
         # If provided a path to save NetCDF file, save adjusted DataSet,
         # else just return the result
         if path:
-            self.save_adjustment_nc(path)
+            self.save_adjustment_nc(path, years_per_chunk)
         else:
             return self.sim_fut_ba
 
-    def save_adjustment_nc(self, path):
+    def save_adjustment_nc(self, path, years_per_chunk=None):
         """
         Saves adjusted data to NetCDF file at specific path
 
@@ -322,14 +324,27 @@ class Adjustment:
         ----------
         path: str
             Location and name of output file
+        years_per_chunk: int
+            Number of years to include per netCDF file
         """
-        try:
-            self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
-        except AttributeError:
-            try:
-                self.sim_fut_ba.to_netcdf(path)
-            except AttributeError:
-                AttributeError('Unable to write to NetCDF. Possibly incompatible calendars.')
+        # If some number of years specified, save in chunks of that many years
+        if years_per_chunk:
+            days, month_numbers, years = util.time_scraping(self.datasets)
+            years = years['sim_fut']
+            total_years = max(years) - min(years)
+            years_chunks = np.array_split(np.unique(years),
+                                          np.ceil(total_years / years_per_chunk))
+
+            for year_chunk in years_chunks:
+                chunk = self.sim_fut_ba.sel(time=self.sim_fut_ba.time.dt.year.isin(year_chunk))
+                file_name = f'{path}_{year_chunk[0]}-{year_chunk[-1]}.nc'
+                try:
+                    chunk.convert_calendar(self.input_calendar, align_on='date').to_netcdf(file_name)
+                except AttributeError:
+                    try:
+                        chunk.to_netcdf(file_name)
+                    except AttributeError:
+                        AttributeError('Unable to write to NetCDF. Possibly incompatible calendars.')
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):

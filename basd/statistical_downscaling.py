@@ -201,7 +201,7 @@ class Downscaler:
 
         return result
 
-    def downscale(self, n_jobs: int = 1, path: str = None):
+    def downscale(self, n_jobs: int = 1, path: str = None, years_per_chunk=None):
         # Get days, months and years data
         days, month_numbers, years = util.time_scraping(self.datasets)
 
@@ -218,12 +218,11 @@ class Downscaler:
 
         results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10)(
             delayed(downscale_one_location_parallel)(
+                dict(lat=i_loc[0], lon=i_loc[1]), self.params,
                 get_data_at_loc(dict(lat=i_loc[0], lon=i_loc[1]), self.variable,
                                 self.obs_fine, self.sim_coarse, self.sim_fine,
                                 month_numbers, self.downscaling_factors, self.sum_weights),
-                self.variable, self.params,
-                month_numbers, self.downscaling_factors, self.sum_weights,
-                self.rotation_matrices) for i_loc in i_locations)
+                month_numbers, self.downscaling_factors, self.rotation_matrices) for i_loc in i_locations)
 
         i_locations = np.ndindex(self.coarse_sizes['lat'], self.coarse_sizes['lon'])
         for i, i_loc in enumerate(i_locations):
@@ -239,11 +238,11 @@ class Downscaler:
                 results[i].transpose((2, 0, 1))
 
         if path:
-            self.save_downscale_nc(path)
+            self.save_downscale_nc(path, years_per_chunk)
 
         return self.sim_fine
 
-    def save_downscale_nc(self, path):
+    def save_downscale_nc(self, path, years_per_chunk=None):
         """
         Saves adjusted data to NetCDF file at specific path
 
@@ -251,14 +250,36 @@ class Downscaler:
         ----------
         path: str
             Location and name of output file
+        years_per_chunk: int
+            Number of years to include per netCDF file
         """
-        try:
-            self.sim_fine.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
-        except AttributeError:
+        # If some number of years specified, save in chunks of that many years
+        if years_per_chunk:
+            days, month_numbers, years = util.time_scraping(self.datasets)
+            total_years = max(years) - min(years)
+            years_chunks = np.array_split(np.unique(years),
+                                          np.ceil(total_years / years_per_chunk))
+
+            for year_chunk in years_chunks:
+                chunk = self.sim_fine.sel(time=self.sim_fine.time.dt.year.isin(year_chunk))
+                file_name = f'{path}_{year_chunk[0]}-{year_chunk[-1]}.nc'
+                try:
+                    chunk.convert_calendar(self.input_calendar, align_on='date').to_netcdf(file_name)
+                except AttributeError:
+                    try:
+                        chunk.to_netcdf(file_name)
+                    except AttributeError:
+                        AttributeError('Unable to write to NetCDF. Possibly incompatible calendars.')
+
+        # If no number of years per chunk specified, save as single NetCDF file
+        else:
             try:
-                self.sim_fine.to_netcdf(path)
+                self.sim_fine.convert_calendar(self.input_calendar, align_on='date').to_netcdf(path)
             except AttributeError:
-                AttributeError('Unable to write to NetCDF. Possibly incompatible calendars.')
+                try:
+                    self.sim_fine.to_netcdf(path)
+                except AttributeError:
+                    AttributeError('Unable to write to NetCDF. Possibly incompatible calendars.')
 
 
 def get_data_at_loc(loc, variable,
