@@ -114,8 +114,8 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
     f_lon = len(fine_lons) / len(coarse_lons)
 
     # If integers already, return
-    if isinstance(f_lat, int) & isinstance(f_lon, int):
-        return obs_fine, sim_coarse
+    if f_lat.is_integer() & f_lon.is_integer():
+        return sim_coarse
 
     # Else, get the nearest integer factor that divides the grid evenly
     lat_facts = factors(len(fine_lats))

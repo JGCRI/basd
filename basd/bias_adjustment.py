@@ -1,5 +1,6 @@
 import datetime as dt
 
+import dask.array as da
 from joblib import Parallel, delayed
 import numpy as np
 import xarray as xr
@@ -172,9 +173,9 @@ class Adjustment:
 
         # Put in dictionary for easy iteration
         data_loc = {
-            'obs_hist': obs_hist_loc,
-            'sim_hist': sim_hist_loc,
-            'sim_fut': sim_fut_loc
+            'obs_hist': obs_hist_loc.values,
+            'sim_hist': sim_hist_loc.values,
+            'sim_fut': sim_fut_loc.values
         }
 
         # If scaling using climatology, get upper bound for scaling
@@ -269,45 +270,35 @@ class Adjustment:
 
         if lat_chunk_size & lon_chunk_size:
             # Manual chunk method
-            chunk_sizes = self.obs_hist[self.variable].chunk({'lat': lat_chunk_size, 'lon': lon_chunk_size}).chunksizes
-
-            # Indexes per chunk
-            lat_indexes, lon_indexes = util.chunk_indexes(chunk_sizes)
-
-            # Chunk to work on
-            chunks = np.ndindex(len(lat_indexes), len(lon_indexes))
-
-            chunked_results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10)(
-                delayed(adjust_bias_chunk)(
-                    self.obs_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
-                    self.sim_hist[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
-                    self.sim_fut[self.variable][dict(lat=lat_indexes[chunk[0]], lon=lon_indexes[chunk[1]])],
-                    self.params,
-                    self.variable,
-                    days,
-                    month_numbers,
-                    years) for chunk in chunks)
-
-            self.sim_fut_ba = xr.combine_by_coords(chunked_results)
+            self.obs_hist = self.obs_hist.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1))
+            self.sim_hist = self.sim_hist.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1))
+            self.sim_fut = self.sim_fut.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1))
 
         else:
-            # Iterate through each location and adjust bias
-            i_locations = np.ndindex(self.sizes['lat'], self.sizes['lon'])
+            # Auto chunk method (not allowing to be chunked over time)
+            self.obs_hist = self.obs_hist.chunk(dict(lon=None, lat=None, time=-1))
+            self.sim_hist = self.sim_hist.chunk(dict(lon=None, lat=None, time=-1))
+            self.sim_fut = self.sim_fut.chunk(dict(lon=None, lat=None, time=-1))
 
-            # Find and save results into adjusted DataSet
-            results = Parallel(n_jobs=n_jobs, prefer='processes', verbose=10)(
-                delayed(adjust_bias_one_location_parallel)(
-                    self.obs_hist[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
-                    self.sim_hist[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
-                    self.sim_fut[self.variable][dict(lat=i_loc[0], lon=i_loc[1])],
-                    self.params,
-                    days,
-                    month_numbers,
-                    years) for i_loc in i_locations)
+        # Order dimensions lon, lat, time
+        self.obs_hist[self.variable] = self.obs_hist[self.variable].transpose('lon', 'lat', 'time')
+        self.sim_hist[self.variable] = self.sim_hist[self.variable].transpose('lon', 'lat', 'time')
+        self.sim_fut[self.variable] = self.sim_fut[self.variable].transpose('lon', 'lat', 'time')
 
-            i_locations = np.ndindex(self.sizes['lat'], self.sizes['lon'])
-            for i, i_loc in enumerate(i_locations):
-                self.sim_fut_ba[self.variable][dict(lat=i_loc[0], lon=i_loc[1])] = results[i]
+        # Set up dask computation
+        ba_output_data = da.map_blocks(adjust_bias_chunk,
+                                       self.obs_hist[self.variable].data,
+                                       self.sim_hist[self.variable].data,
+                                       self.sim_fut[self.variable].data,
+                                       params=self.params,
+                                       days=days, month_numbers=month_numbers, years=years,
+                                       dtype=object, chunks=self.sim_fut[self.variable].chunks)
+
+        # Compute bias adjustment in chunks
+        ba_output_data.compute()
+
+        # Save output
+        self.sim_fut_ba[self.variable].data = ba_output_data
 
         # If provided a path to save NetCDF file, save adjusted DataSet,
         # else just return the result
@@ -387,7 +378,7 @@ def running_window_mode(result, window_centers, data_loc, days, years, long_term
         m_keep = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center,
                                                                  params.step_size, years['sim_fut'])
         m_ba_keep = np.in1d(m_ba, m_keep)
-        result.data[m_keep] = result_this_window[m_ba_keep]
+        result[m_keep] = result_this_window[m_ba_keep]
 
     return result
 
@@ -427,9 +418,31 @@ def month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, 
 
         # put bias-adjusted data into result
         m = month_numbers['sim_fut'] == month
-        result.data[m] = result_this_month
+        result[m] = result_this_month
 
     return result
+
+
+def adjust_bias_chunk(obs_hist, sim_hist, sim_fut, params, days, month_numbers, years):
+    # Iterate through each location and adjust bias
+    i_locations = np.ndindex(obs_hist.shape[0], obs_hist.shape[1])
+
+    # Unadjusted results of correct shape
+    sim_fut_ba = sim_fut
+
+    # Find and save results into adjusted DataSet
+    for i, i_loc in enumerate(i_locations):
+        result = adjust_bias_one_location_parallel(
+            obs_hist[i_loc],
+            sim_hist[i_loc],
+            sim_fut[i_loc],
+            params,
+            days,
+            month_numbers,
+            years)
+        sim_fut_ba[i_loc] = result
+
+    return sim_fut_ba
 
 
 def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
@@ -477,30 +490,30 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
     ubc_ba = None
     if params.halfwin_ubc:
         ubcs = {
-            'obs_hist': util.get_upper_bound_climatology(obs_hist_loc.values,
+            'obs_hist': util.get_upper_bound_climatology(obs_hist_loc,
                                                          days['obs_hist'],
                                                          params.halfwin_ubc),
-            'sim_hist': util.get_upper_bound_climatology(sim_hist_loc.values,
+            'sim_hist': util.get_upper_bound_climatology(sim_hist_loc,
                                                          days['sim_hist'],
                                                          params.halfwin_ubc),
-            'sim_fut': util.get_upper_bound_climatology(sim_fut_loc.values,
+            'sim_fut': util.get_upper_bound_climatology(sim_fut_loc,
                                                         days['sim_fut'],
                                                         params.halfwin_ubc)
         }
         for key, value in data_loc.items():
-            data_loc[key].values = util.scale_by_upper_bound_climatology(value.values, ubcs[key], divide=True)
+            data_loc[key] = util.scale_by_upper_bound_climatology(value, ubcs[key], divide=True)
 
         ubc_ba = util.ccs_transfer_sim2obs_upper_bound_climatology(ubcs, days)
 
     # Get long term mean over each time series using valid values
     long_term_mean = {
-        'obs_hist': util.average_valid_values(obs_hist_loc.values, np.nan,
+        'obs_hist': util.average_valid_values(obs_hist_loc, np.nan,
                                               params.lower_bound, params.lower_threshold,
                                               params.upper_bound, params.upper_threshold),
-        'sim_hist': util.average_valid_values(sim_hist_loc.values, np.nan,
+        'sim_hist': util.average_valid_values(sim_hist_loc, np.nan,
                                               params.lower_bound, params.lower_threshold,
                                               params.upper_bound, params.upper_threshold),
-        'sim_fut': util.average_valid_values(sim_fut_loc.values, np.nan,
+        'sim_fut': util.average_valid_values(sim_fut_loc, np.nan,
                                              params.lower_bound, params.lower_threshold,
                                              params.upper_bound, params.upper_threshold)
     }
@@ -521,25 +534,3 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
 
     # Return just resulting array if extra details not requested
     return result
-
-
-def adjust_bias_chunk(obs_hist, sim_hist, sim_fut, params, variable, days, month_numbers, years):
-    # Iterate through each location and adjust bias
-    i_locations = np.ndindex(obs_hist.sizes['lat'], obs_hist.sizes['lon'])
-
-    # Unadjusted results of correct shape
-    sim_fut_ba = xr.Dataset({variable: sim_fut})
-
-    # Find and save results into adjusted DataSet
-    for i, i_loc in enumerate(i_locations):
-        result = adjust_bias_one_location_parallel(
-            obs_hist[dict(lat=i_loc[0], lon=i_loc[1])],
-            sim_hist[dict(lat=i_loc[0], lon=i_loc[1])],
-            sim_fut[dict(lat=i_loc[0], lon=i_loc[1])],
-            params,
-            days,
-            month_numbers,
-            years)
-        sim_fut_ba[variable][dict(lat=i_loc[0], lon=i_loc[1])] = result
-
-    return sim_fut_ba
