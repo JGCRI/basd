@@ -1,7 +1,7 @@
 import datetime as dt
 
 import dask.array as da
-from joblib import Parallel, delayed
+from dask.diagnostics import ProgressBar
 import numpy as np
 import xarray as xr
 
@@ -286,16 +286,17 @@ class Adjustment:
         self.sim_fut[self.variable] = self.sim_fut[self.variable].transpose('lon', 'lat', 'time')
 
         # Set up dask computation
-        ba_output_data = da.map_blocks(adjust_bias_chunk,
-                                       self.obs_hist[self.variable].data,
-                                       self.sim_hist[self.variable].data,
-                                       self.sim_fut[self.variable].data,
-                                       params=self.params,
-                                       days=days, month_numbers=month_numbers, years=years,
-                                       dtype=object, chunks=self.sim_fut[self.variable].chunks)
+        with ProgressBar():
+            ba_output_data = da.map_blocks(adjust_bias_chunk,
+                                           self.obs_hist[self.variable].data,
+                                           self.sim_hist[self.variable].data,
+                                           self.sim_fut[self.variable].data,
+                                           params=self.params,
+                                           days=days, month_numbers=month_numbers, years=years,
+                                           dtype=object, chunks=self.sim_fut[self.variable].chunks)
 
-        # Compute bias adjustment in chunks
-        ba_output_data.compute()
+            # Compute bias adjustment in chunks
+            ba_output_data.compute()
 
         # Save output
         self.sim_fut_ba[self.variable].data = ba_output_data
@@ -530,7 +531,7 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
 
     # If we scaled variable before, time to scale back
     if params.halfwin_ubc:
-        result.values = util.scale_by_upper_bound_climatology(result.values, ubc_ba, divide=False)
+        result = util.scale_by_upper_bound_climatology(result, ubc_ba, divide=False)
 
     # Return just resulting array if extra details not requested
     return result
