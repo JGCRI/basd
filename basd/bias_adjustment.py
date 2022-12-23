@@ -284,6 +284,7 @@ class Adjustment:
         self.obs_hist[self.variable] = self.obs_hist[self.variable].transpose('lon', 'lat', 'time')
         self.sim_hist[self.variable] = self.sim_hist[self.variable].transpose('lon', 'lat', 'time')
         self.sim_fut[self.variable] = self.sim_fut[self.variable].transpose('lon', 'lat', 'time')
+        self.sim_fut_ba[self.variable] = self.sim_fut_ba[self.variable].transpose('lon', 'lat', 'time')
 
         # Set up dask computation
         with ProgressBar():
