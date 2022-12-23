@@ -1,4 +1,5 @@
 import datetime as dt
+import os
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -244,20 +245,16 @@ class Adjustment:
         return result
 
     def adjust_bias(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                    n_jobs: int = 1, path: str = None, years_per_chunk: int = None):
+                    path: str = None):
         """
         Does bias adjustment at every location of input data
 
         Parameters
         ----------
-        n_jobs: int
-            Number of jobs to request for parallelization
         path: str
             Path to save NetCDF output. If None, return result but don't create file
         lat_chunk_size: int
         lon_chunk_size: int
-        years_per_chunk: int
-            Optional number of years to include per netCDF file
 
         Returns
         -------
@@ -287,17 +284,16 @@ class Adjustment:
         self.sim_fut_ba[self.variable] = self.sim_fut_ba[self.variable].transpose('lon', 'lat', 'time')
 
         # Set up dask computation
-        with ProgressBar():
-            ba_output_data = da.map_blocks(adjust_bias_chunk,
-                                           self.obs_hist[self.variable].data,
-                                           self.sim_hist[self.variable].data,
-                                           self.sim_fut[self.variable].data,
-                                           params=self.params,
-                                           days=days, month_numbers=month_numbers, years=years,
-                                           dtype=object, chunks=self.sim_fut[self.variable].chunks)
+        ba_output_data = da.map_blocks(adjust_bias_chunk,
+                                       self.obs_hist[self.variable].data,
+                                       self.sim_hist[self.variable].data,
+                                       self.sim_fut[self.variable].data,
+                                       params=self.params,
+                                       days=days, month_numbers=month_numbers, years=years,
+                                       dtype=object, chunks=self.sim_fut[self.variable].chunks)
 
-            # Compute bias adjustment in chunks
-            ba_output_data.compute()
+        # Compute bias adjustment in chunks
+        # ba_output_data.compute()
 
         # Save output
         self.sim_fut_ba[self.variable].data = ba_output_data
@@ -305,39 +301,34 @@ class Adjustment:
         # If provided a path to save NetCDF file, save adjusted DataSet,
         # else just return the result
         if path:
-            self.save_adjustment_nc(path, years_per_chunk)
+            self.save_adjustment_nc(path)
         else:
             return self.sim_fut_ba
 
-    def save_adjustment_nc(self, path, years_per_chunk=None):
+    def save_adjustment_nc(self, path):
         """
         Saves adjusted data to NetCDF file at specific path
 
         Parameters
         ----------
         path: str
-            Location and name of output file
-        years_per_chunk: int
-            Number of years to include per netCDF file
+            Location to save output file(s)
         """
-        # If some number of years specified, save in chunks of that many years
-        if years_per_chunk:
-            days, month_numbers, years = util.time_scraping(self.datasets)
-            years = years['sim_fut']
-            total_years = max(years) - min(years)
-            years_chunks = np.array_split(np.unique(years),
-                                          np.ceil(total_years / years_per_chunk))
+        # Try converting calendar back to input calendar
+        try:
+            self.sim_fut_ba = self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date')
+        except AttributeError:
+            AttributeError('Unable to convert calendar')
 
-            for year_chunk in years_chunks:
-                chunk = self.sim_fut_ba.sel(time=self.sim_fut_ba.time.dt.year.isin(year_chunk))
-                file_name = f'{path}_{year_chunk[0]}-{year_chunk[-1]}.nc'
-                try:
-                    chunk.convert_calendar(self.input_calendar, align_on='date').to_netcdf(file_name)
-                except AttributeError:
-                    try:
-                        chunk.to_netcdf(file_name)
-                    except AttributeError:
-                        AttributeError('Unable to write to NetCDF. Possibly incompatible calendars.')
+        # Group output dataset by year
+        years, datasets = zip(*self.sim_fut_ba.groupby('time.year'))
+
+        # Get file names for each chunk
+        filenames = [os.path.join(path, f'{self.variable}_BA_day_{year}.nc')
+                     for year in years]
+
+        # Save datasets
+        xr.save_mfdataset(datasets, filenames)
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
