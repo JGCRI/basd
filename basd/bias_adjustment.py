@@ -328,7 +328,7 @@ class Adjustment:
                      for year in years]
 
         # Save datasets
-        xr.save_mfdataset(datasets, filenames)
+        xr.save_mfdataset(datasets, filenames, mode='w')
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
