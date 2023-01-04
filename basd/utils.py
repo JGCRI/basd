@@ -543,9 +543,9 @@ def sample_invalid_values(a, seed=None, if_all_invalid_use=np.nan, warn=False):
 
     Returns
     -------
-    d_replaced: array
+    d_replaced: Array
         Result of invalid data replacement.
-    l_invalid: array
+    l_invalid: Array
         Boolean array indicating indices of replacement.
 
     """
