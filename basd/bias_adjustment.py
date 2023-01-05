@@ -292,7 +292,7 @@ class Adjustment:
                                        dtype=object, chunks=self.sim_fut[self.variable].chunks)
 
         # Compute bias adjustment in chunks
-        # ba_output_data.compute()
+        # ba_output_data.persist()
 
         # Save output
         self.sim_fut_ba[self.variable].data = ba_output_data
@@ -313,6 +313,9 @@ class Adjustment:
         path: str
             Location to save output file(s)
         """
+        # Make sure we've computed
+        self.sim_fut_ba = self.sim_fut_ba.persist()
+
         # Try converting calendar back to input calendar
         try:
             self.sim_fut_ba = self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date')
