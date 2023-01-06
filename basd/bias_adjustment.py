@@ -244,7 +244,7 @@ class Adjustment:
         return result
 
     def adjust_bias(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                    path: str = None):
+                    path: str = None, split=False):
         """
         Does bias adjustment at every location of input data
 
@@ -300,11 +300,11 @@ class Adjustment:
         # If provided a path to save NetCDF file, save adjusted DataSet,
         # else just return the result
         if path:
-            self.save_adjustment_nc(path)
+            self.save_adjustment_nc(path, split)
         else:
             return self.sim_fut_ba
 
-    def save_adjustment_nc(self, path):
+    def save_adjustment_nc(self, path, split=False):
         """
         Saves adjusted data to NetCDF file at specific path
 
@@ -312,6 +312,8 @@ class Adjustment:
         ----------
         path: str
             Location to save output file(s)
+        split: bool
+            whether to save as one or many files
         """
         # Make sure we've computed
         self.sim_fut_ba = self.sim_fut_ba.persist()
@@ -322,15 +324,18 @@ class Adjustment:
         except AttributeError:
             AttributeError('Unable to convert calendar')
 
-        # Group output dataset by year
-        years, datasets = zip(*self.sim_fut_ba.groupby('time.year'))
+        if not split:
+            self.sim_fut_ba.to_netcdf(os.path.join(path, f'{self.variable}_2015-2100.nc'))
+        else:
+            # Group output dataset by year
+            years, datasets = zip(*self.sim_fut_ba.groupby('time.year'))
 
-        # Get file names for each chunk
-        filenames = [os.path.join(path, f'{self.variable}_BA_day_{year}.nc')
-                     for year in years]
+            # Get file names for each chunk
+            filenames = [os.path.join(path, f'{self.variable}_BA_day_{year}.nc')
+                         for year in years]
 
-        # Save datasets
-        xr.save_mfdataset(datasets, filenames, mode='w', compute=True)
+            # Save datasets
+            xr.save_mfdataset(datasets, filenames, mode='w', compute=True)
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
