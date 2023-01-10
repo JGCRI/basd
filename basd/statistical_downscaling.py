@@ -245,7 +245,7 @@ class Downscaler:
 
         # Chunk grid area cell weights
         fine_size = tuple((self.obs_fine.sizes['lon'], self.obs_fine.sizes['lat'], 1))
-        self.sum_weights = self.sum_weights.repeat(fine_size[1]).reshape(fine_size)
+        self.sum_weights = self.sum_weights.repeat(fine_size[0]).reshape(fine_size)
         fine_chunk_size = tuple((fine_lon_chunk_size, fine_lat_chunk_size, 1))
         chunk_sum_weights = da.from_array(self.sum_weights, chunks=fine_chunk_size)
 
