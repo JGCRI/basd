@@ -244,16 +244,18 @@ class Adjustment:
         return result
 
     def adjust_bias(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                    path: str = None, split=False):
+                    file: str = None):
         """
         Does bias adjustment at every location of input data
 
         Parameters
         ----------
-        path: str
-            Path to save NetCDF output. If None, return result but don't create file
+        file: str
+            Location and name string to save output file
         lat_chunk_size: int
+            Number of cells to include in chunk in lat direction
         lon_chunk_size: int
+            Number of cells to include in chunk in lon direction
 
         Returns
         -------
@@ -299,21 +301,19 @@ class Adjustment:
 
         # If provided a path to save NetCDF file, save adjusted DataSet,
         # else just return the result
-        if path:
-            self.save_adjustment_nc(path, split)
+        if file:
+            self.save_adjustment_nc(file)
         else:
             return self.sim_fut_ba
 
-    def save_adjustment_nc(self, path, split=False):
+    def save_adjustment_nc(self, file):
         """
         Saves adjusted data to NetCDF file at specific path
 
         Parameters
         ----------
-        path: str
-            Location to save output file(s)
-        split: bool
-            whether to save as one or many files
+        file: str
+            Location and name string to save output file
         """
         # Make sure we've computed
         self.sim_fut_ba = self.sim_fut_ba.persist()
@@ -324,18 +324,7 @@ class Adjustment:
         except AttributeError:
             AttributeError('Unable to convert calendar')
 
-        if not split:
-            self.sim_fut_ba.to_netcdf(os.path.join(path, f'{self.variable}_2015-2100.nc'))
-        else:
-            # Group output dataset by year
-            years, datasets = zip(*self.sim_fut_ba.groupby('time.year'))
-
-            # Get file names for each chunk
-            filenames = [os.path.join(path, f'{self.variable}_BA_day_{year}.nc')
-                         for year in years]
-
-            # Save datasets
-            xr.save_mfdataset(datasets, filenames, mode='w', compute=True)
+        self.sim_fut_ba.to_netcdf(file)
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
