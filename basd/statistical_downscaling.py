@@ -287,7 +287,7 @@ class Downscaler:
         except AttributeError:
             AttributeError('Unable to convert calendar')
 
-        self.sim_fine.to_netcdf(file)
+        self.sim_fine.to_netcdf(file, encoding={self.variable: {'dtype': 'float'}})
 
 
 def get_data_at_loc(loc,
