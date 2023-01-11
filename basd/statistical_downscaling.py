@@ -402,7 +402,7 @@ def downscale_chunk(obs_fine, sim_coarse, sim_fine, weights,
         lat_end = (i_loc[1] + 1) * downscaling_factors['lat']
         lon_start = i_loc[0] * downscaling_factors['lon']
         lon_end = (i_loc[0] + 1) * downscaling_factors['lon']
-        output_chunk[lon_start:lon_end, lat_start:lat_end] = result.transpose(1, 0, 2)
+        output_chunk[lon_start:lon_end, lat_start:lat_end] = result
 
     # Return updated chunk
     return output_chunk
