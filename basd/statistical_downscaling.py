@@ -244,9 +244,9 @@ class Downscaler:
         self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lon', 'lat', 'time')
 
         # Chunk grid area cell weights
-        fine_size = tuple((self.obs_fine.sizes['lon'], self.obs_fine.sizes['lat'], 1))
+        fine_size = tuple((self.obs_fine.sizes['lat'], self.obs_fine.sizes['lon'], 1))
         self.sum_weights = self.sum_weights.repeat(fine_size[0]).reshape(fine_size)
-        fine_chunk_size = tuple((fine_lon_chunk_size, fine_lat_chunk_size, 1))
+        fine_chunk_size = tuple((fine_lat_chunk_size, fine_lon_chunk_size, 1))
         chunk_sum_weights = da.from_array(self.sum_weights, chunks=fine_chunk_size)
 
         # Downscale with dask map_blocks handling parallelization
