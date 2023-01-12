@@ -239,9 +239,9 @@ class Downscaler:
         self.sim_fine = self.sim_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))
 
         # Order dimensions lon, lat, time
-        self.obs_fine[self.variable] = self.obs_fine[self.variable].transpose('lon', 'lat', 'time')
-        self.sim_fine[self.variable] = self.sim_fine[self.variable].transpose('lon', 'lat', 'time')
-        self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lon', 'lat', 'time')
+        self.obs_fine[self.variable] = self.obs_fine[self.variable].transpose('lat', 'lon', 'time')
+        self.sim_fine[self.variable] = self.sim_fine[self.variable].transpose('lat', 'lon', 'time')
+        self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lat', 'lon', 'time')
 
         # Chunk grid area cell weights
         fine_size = tuple((self.obs_fine.sizes['lat'], self.obs_fine.sizes['lon'], 1))
@@ -320,19 +320,19 @@ def get_data_at_loc(loc,
     data['sim_coarse'] = coarse_values
 
     # Range of indexes of fine cells
-    lat_start = loc[1] * downscaling_factors['lat']
-    lat_end = (loc[1] + 1) * downscaling_factors['lat']
-    lon_start = loc[0] * downscaling_factors['lon']
-    lon_end = (loc[0] + 1) * downscaling_factors['lon']
+    lat_start = loc[0] * downscaling_factors['lat']
+    lat_end = (loc[0] + 1) * downscaling_factors['lat']
+    lon_start = loc[1] * downscaling_factors['lon']
+    lon_end = (loc[1] + 1) * downscaling_factors['lon']
 
     # Get the cell weights of relevant latitudes
     sum_weights_loc = sum_weights[lat_start:lat_end, lon_start:lon_end]
 
     # Value of fine observational cells
-    obs_fine_values = obs_fine[lon_start:lon_end, lat_start:lat_end]
+    obs_fine_values = obs_fine[lat_start:lat_end, lon_start:lon_end]
 
     # Values of fine simulated cells
-    sim_fine_values = sim_fine[lon_start:lon_end, lat_start:lat_end]
+    sim_fine_values = sim_fine[lat_start:lat_end, lon_start:lon_end]
 
     # reshape. (lat, lon, time) --> (time, lat x lon) ex.) [4 x 4 x 365] --> [365 x 16]
     # Spreads fine cell at single time point, first along row then cols.
@@ -340,10 +340,10 @@ def get_data_at_loc(loc,
     #  5  6  7  8  --- \   time 2:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
     #  9 10 11 12  --- /   time 3:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
     # 13 14 15 16     /    time 4:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
-    data['obs_fine'] = obs_fine_values.reshape((downscaling_factors['lat'] * downscaling_factors['lon'],
-                                                month_numbers['obs_fine'].size)).T
-    data['sim_fine'] = sim_fine_values.reshape((downscaling_factors['lat'] * downscaling_factors['lon'],
-                                                month_numbers['sim_coarse'].size)).T
+    data['obs_fine'] = obs_fine_values.T.reshape(month_numbers['obs_fine'].size,
+                                                 downscaling_factors['lat'] * downscaling_factors['lon'])
+    data['sim_fine'] = sim_fine_values.T.reshape((month_numbers['sim_coarse'].size,
+                                                  downscaling_factors['lat'] * downscaling_factors['lon']))
     sum_weights_loc = sum_weights_loc.reshape(downscaling_factors['lat'] * downscaling_factors['lon'])
 
     return data, sum_weights_loc
@@ -398,11 +398,11 @@ def downscale_chunk(obs_fine, sim_coarse, sim_fine, weights,
                                                  rotation_matrices)
 
         # Save the result to the output chunk object
-        lat_start = i_loc[1] * downscaling_factors['lat']
-        lat_end = (i_loc[1] + 1) * downscaling_factors['lat']
-        lon_start = i_loc[0] * downscaling_factors['lon']
-        lon_end = (i_loc[0] + 1) * downscaling_factors['lon']
-        output_chunk[lon_start:lon_end, lat_start:lat_end] = result
+        lat_start = i_loc[0] * downscaling_factors['lat']
+        lat_end = (i_loc[0] + 1) * downscaling_factors['lat']
+        lon_start = i_loc[1] * downscaling_factors['lon']
+        lon_end = (i_loc[1] + 1) * downscaling_factors['lon']
+        output_chunk[lat_start:lat_end, lon_start:lon_end] = result
 
     # Return updated chunk
     return output_chunk
@@ -455,9 +455,9 @@ def downscale_one_location_parallel(loc, params,
                                       rotation_matrices, params)
 
     # Reshape to grid
-    result = result.T.reshape((downscaling_factors['lon'],
-                               downscaling_factors['lat'],
-                               month_numbers['sim_fine'].size))
+    result = result.reshape(month_numbers['sim_fine'].size,
+                            downscaling_factors['lon'],
+                            downscaling_factors['lat']).T
 
     return result
 
