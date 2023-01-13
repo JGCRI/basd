@@ -177,7 +177,7 @@ def weighted_sum_preserving_mbcn(obs_fine, sim_coarse, sim_fine,
             sim_fine -= np.outer(np.dot(
                 sim_fine - x_sim_previous, sum_weights), sum_weights)
 
-        print(f'Agg fine value at iteration {i}: {np.dot(sim_fine, sum_weights)[0]}')
+        # print(f'Agg fine value at iteration {i}: {np.dot(sim_fine, sum_weights)[0]}')
 
     return sim_fine
 
