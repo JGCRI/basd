@@ -75,7 +75,7 @@ def weighted_sum_preserving_mbcn(obs_fine, sim_coarse, sim_fine,
         2D array with M rows, where M is the number of time steps, and N cols,
         being the number of fine cells associated with the given coarse cell.
         This is the simulated data, interpolated to the observational spatial resolution
-    sum_weights: array
+    sum_weights: np.Array
         1D array of length N, grid cell area weights
     rotation_matrices: list , optional
         (N,N) ndarrays in a list. These are orthogonal matrices defining
@@ -177,7 +177,7 @@ def weighted_sum_preserving_mbcn(obs_fine, sim_coarse, sim_fine,
             sim_fine -= np.outer(np.dot(
                 sim_fine - x_sim_previous, sum_weights), sum_weights)
 
-        # print(f'Agg fine value at iteration {i}: {np.dot(sim_fine, sum_weights)[0]}')
+        print(f'Agg fine value at iteration {i}: {np.dot(sim_fine, sum_weights)[0]}')
 
     return sim_fine
 
