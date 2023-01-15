@@ -316,7 +316,7 @@ def get_data_at_loc(loc,
     data = {}
 
     # Values of the coarse cell over time period
-    coarse_values = sim_coarse[loc]
+    coarse_values = sim_coarse[loc].reshape(month_numbers['sim_coarse'].size)
     data['sim_coarse'] = coarse_values
 
     # Range of indexes of fine cells
@@ -340,14 +340,10 @@ def get_data_at_loc(loc,
     #  5  6  7  8  --- \   time 2:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
     #  9 10 11 12  --- /   time 3:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
     # 13 14 15 16     /    time 4:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
-    data['obs_fine'] = obs_fine_values.transpose(2,
-                                                 0,
-                                                 1).reshape((month_numbers['obs_fine'].size,
-                                                             downscaling_factors['lat'] * downscaling_factors['lon']))
-    data['sim_fine'] = sim_fine_values.transpose(2,
-                                                 0,
-                                                 1).reshape((month_numbers['sim_coarse'].size,
-                                                             downscaling_factors['lat'] * downscaling_factors['lon']))
+    data['obs_fine'] = obs_fine_values.reshape((downscaling_factors['lat'] * downscaling_factors['lon'],
+                                                month_numbers['obs_fine'].size)).T
+    data['sim_fine'] = sim_fine_values.reshape((downscaling_factors['lat'] * downscaling_factors['lon'],
+                                                month_numbers['sim_coarse'].size)).T
     sum_weights_loc = sum_weights_loc.reshape(downscaling_factors['lat'] * downscaling_factors['lon'])
 
     return data, sum_weights_loc
@@ -477,7 +473,9 @@ def downscale_month_by_month(data, sum_weights, long_term_mean, month_numbers, r
         for key, d in data.items():
             m = month_numbers[key] == month
             assert np.any(m), f'No data found for month {month}, in {key}'
-            valid_values = util.sample_invalid_values(d[m], params.randomization_seed, long_term_mean[key])[0]
+            valid_values, invalid_values = util.sample_invalid_values(d[m],
+                                                                      params.randomization_seed,
+                                                                      long_term_mean[key])
             # TODO: What is up with the parameters for randomize_censored_values?
             randomized_censored_values = util.randomize_censored_values(valid_values,
                                                                         params.lower_bound, params.lower_threshold,
@@ -485,6 +483,7 @@ def downscale_month_by_month(data, sum_weights, long_term_mean, month_numbers, r
                                                                         False, False,
                                                                         params.randomization_seed,
                                                                         10., 10.)
+
             data_this_month[key] = randomized_censored_values
 
         # do statistical downscaling
@@ -535,17 +534,17 @@ def downscale_one_month(data_this_month, rotation_matrices,
         grid of statistically downscaled values
     """
 
-    sim_fine = sdu.weighted_sum_preserving_mbcn(data_this_month['obs_fine'],
-                                                data_this_month['sim_coarse'],
-                                                data_this_month['sim_fine'],
-                                                sum_weights,
-                                                rotation_matrices,
-                                                params.n_quantiles)
+    mbcn_sd_result = sdu.weighted_sum_preserving_mbcn(data_this_month['obs_fine'],
+                                                      data_this_month['sim_coarse'],
+                                                      data_this_month['sim_fine'],
+                                                      sum_weights,
+                                                      rotation_matrices,
+                                                      params.n_quantiles)
 
-    sim_fine = util.randomize_censored_values(sim_fine,
+    sim_fine = util.randomize_censored_values(mbcn_sd_result,
                                               lower_bound, lower_threshold,
                                               upper_bound, upper_threshold,
-                                              True, True)
+                                              False, True)
     # TODO: assert no infs or nans
 
     return sim_fine

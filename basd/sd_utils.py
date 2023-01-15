@@ -69,7 +69,7 @@ def weighted_sum_preserving_mbcn(obs_fine, sim_coarse, sim_fine,
         2D array with M rows, where M is the number of time steps, and N cols,
         being the number of fine cells associated with the given coarse cell.
         This is the observational data
-    sim_coarse: array
+    sim_coarse: np.Array
         1D array of length M, being the number of time-steps
     sim_fine: (M,N) ndarray
         2D array with M rows, where M is the number of time steps, and N cols,
@@ -110,7 +110,7 @@ def weighted_sum_preserving_mbcn(obs_fine, sim_coarse, sim_fine,
     # print(f'Initial Agg fine value: {np.dot(sim_fine, sum_weights)[0]}')
 
     # rescale x_sim_coarse for initial step of algorithm
-    # sim_coarse = sim_coarse * np.sum(sum_weights)
+    sim_coarse = sim_coarse * np.sum(sum_weights)
     # print(f'Initial Coarse Value Scaled: {sim_coarse[0]}')
 
     # Need to iterate at least twice (one rotation, and then reversing that rotation)
@@ -173,11 +173,16 @@ def weighted_sum_preserving_mbcn(obs_fine, sim_coarse, sim_fine,
 
             # preserve weighted sum of original variables
             # Step 3b.3 of <https://doi.org/10.5194/gmd-12-3055-2019>
-            # if i < n_loops - 1:
-            sim_fine -= np.outer(np.dot(
-                sim_fine - x_sim_previous, sum_weights), sum_weights)
+            if i < n_loops - 1:
+                sim_fine -= np.outer(np.dot(
+                    sim_fine - x_sim_previous, sum_weights), sum_weights)
 
-        # print(f'Agg fine value at iteration {i}: {np.dot(sim_fine, sum_weights)[0]}')
+    # print(f'Final Agg fine value: {np.dot(sim_fine, sum_weights)[0]}')
+    # print(f'Sum weights: {sum_weights}')
+    # print(f'Sum weights shape: {sum_weights.shape}')
+    # print(f'obs fine shape: {obs_fine.shape}')
+    # print(f'Sim fine shape: {sim_fine.shape}')
+    # print(f'Sim coarse shape: {sim_coarse.shape}')
 
     return sim_fine
 
