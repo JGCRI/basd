@@ -244,7 +244,7 @@ class Adjustment:
         return result
 
     def adjust_bias(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                    file: str = None):
+                    file: str = None, encoding=None):
         """
         Does bias adjustment at every location of input data
 
@@ -256,6 +256,8 @@ class Adjustment:
             Number of cells to include in chunk in lat direction
         lon_chunk_size: int
             Number of cells to include in chunk in lon direction
+        encoding: dict
+            Parameter for to_netcdf function
 
         Returns
         -------
@@ -302,11 +304,11 @@ class Adjustment:
         # If provided a path to save NetCDF file, save adjusted DataSet,
         # else just return the result
         if file:
-            self.save_adjustment_nc(file)
+            self.save_adjustment_nc(file, encoding)
         else:
             return self.sim_fut_ba
 
-    def save_adjustment_nc(self, file):
+    def save_adjustment_nc(self, file, encoding=None):
         """
         Saves adjusted data to NetCDF file at specific path
 
@@ -314,6 +316,8 @@ class Adjustment:
         ----------
         file: str
             Location and name string to save output file
+        encoding: dict
+            Parameter for to_netcdf function
         """
         # Make sure we've computed
         self.sim_fut_ba = self.sim_fut_ba.persist()
@@ -324,7 +328,7 @@ class Adjustment:
         except AttributeError:
             AttributeError('Unable to convert calendar')
 
-        self.sim_fut_ba.to_netcdf(file, encoding={self.variable: {'dtype': 'float'}})
+        self.sim_fut_ba.to_netcdf(file, encoding=encoding)
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):

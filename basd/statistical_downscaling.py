@@ -205,7 +205,7 @@ class Downscaler:
         return result
 
     def downscale(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                  file: str = None):
+                  file: str = None, encoding=None):
         """
         Function to downscale climate data using MBCn_SD method
 
@@ -217,7 +217,8 @@ class Downscaler:
             Number of cells to include in chunk in lat direction
         lon_chunk_size: int
             Number of cells to include in chunk in lon direction
-
+        encoding: dict
+            Parameter for save as netcdf function
 
         Returns
         -------
@@ -235,9 +236,9 @@ class Downscaler:
         fine_lat_chunk_size = lat_chunk_size * self.downscaling_factors['lat']
 
         # Order dimensions lon, lat, time
-        self.obs_fine[self.variable] = self.obs_fine[self.variable].transpose('lat', 'lon', 'time')
-        self.sim_fine[self.variable] = self.sim_fine[self.variable].transpose('lat', 'lon', 'time')
-        self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lat', 'lon', 'time')
+        self.obs_fine[self.variable] = self.obs_fine[self.variable].transpose('lat', 'lon', 'time').persist()
+        self.sim_fine[self.variable] = self.sim_fine[self.variable].transpose('lat', 'lon', 'time').persist()
+        self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lat', 'lon', 'time').persist()
 
         # Chunk fine data
         self.obs_fine = self.obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))
@@ -265,11 +266,11 @@ class Downscaler:
         self.sim_fine[self.variable].data = ba_output_data
 
         if file:
-            self.save_downscale_nc(file)
+            self.save_downscale_nc(file, encoding)
 
         return self.sim_fine
 
-    def save_downscale_nc(self, file):
+    def save_downscale_nc(self, file, encoding=None):
         """
         Saves Downscaled data to NetCDF files at specific path
 
@@ -277,6 +278,8 @@ class Downscaler:
         ----------
         file: str
             Location to and name of file to save downscaled data
+        encoding: dict
+            Parameter for to_netcdf function
         """
         # Make sure we've computed
         self.sim_fine = self.sim_fine.persist()
@@ -287,7 +290,7 @@ class Downscaler:
         except AttributeError:
             AttributeError('Unable to convert calendar')
 
-        self.sim_fine.to_netcdf(file, encoding={self.variable: {'dtype': 'float'}})
+        self.sim_fine.to_netcdf(file, encoding=encoding)
 
 
 def get_data_at_loc(loc,
