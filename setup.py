@@ -41,7 +41,8 @@ setup(
     ],
     extras_require={
         'dev': [
-            "plotly"
+            "plotly",
+            "xesmf"
         ]
     }
 )
