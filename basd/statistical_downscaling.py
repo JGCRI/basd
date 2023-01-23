@@ -236,13 +236,13 @@ class Downscaler:
         fine_lat_chunk_size = lat_chunk_size * self.downscaling_factors['lat']
 
         # Order dimensions lon, lat, time
-        self.obs_fine[self.variable] = self.obs_fine[self.variable].transpose('lat', 'lon', 'time').persist()
-        self.sim_fine[self.variable] = self.sim_fine[self.variable].transpose('lat', 'lon', 'time').persist()
-        self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lat', 'lon', 'time').persist()
+        self.obs_fine[self.variable] = self.obs_fine[self.variable].transpose('lat', 'lon', 'time')
+        self.sim_fine[self.variable] = self.sim_fine[self.variable].transpose('lat', 'lon', 'time')
+        self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lat', 'lon', 'time')
 
         # Chunk fine data
-        self.obs_fine = self.obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))
-        self.sim_fine = self.sim_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))
+        self.obs_fine = self.obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1)).persist()
+        self.sim_fine = self.sim_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1)).persist()
 
         # Chunk grid area cell weights
         fine_size = tuple((self.obs_fine.sizes['lat'], self.obs_fine.sizes['lon'], 1))
