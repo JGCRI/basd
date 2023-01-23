@@ -7,7 +7,7 @@ class Parameters:
                  lower_bound: float = None, lower_threshold: float = None,
                  upper_bound: float = None, upper_threshold: float = None,
                  n_iterations=0, halfwin_ubc=0, trend_preservation='additive', n_quantiles=50,
-                 p_value_eps=1.e-10, max_change_factor=100., max_adjustment_factor=9.,
+                 p_value_eps=1.e-10, max_change_factor=100., max_adjustment_factor=9., randomization_seed=1,
                  if_all_invalid_use=None, adjust_p_values=False, detrend=False, unconditional_ccs_transfer=False,
                  trendless_bound_frequency=False, repeat_warnings=False, invalid_value_warnings=False, adjust_obs=True):
         """
@@ -51,6 +51,8 @@ class Parameters:
         adjust_obs: boolean, optional
             If True then transfer simulated climate change signal to x_obs_hist,
             otherwise apply non-parametric quantile mapping to x_sim_fut.
+        unconditional_ccs_transfer: boolean, optional
+            If false (default), only uses values within thresholds for ccs, otherwise all values
         """
         # Setting the parameters for the adjustment
         self.step_size = step_size
@@ -73,6 +75,7 @@ class Parameters:
         self.lower_threshold = lower_threshold
         self.lower_bound = lower_bound
         self.adjust_obs = adjust_obs
+        self.randomization_seed = randomization_seed
 
         # Quality of life params
         self.invalid_value_warnings = invalid_value_warnings

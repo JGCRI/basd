@@ -1,9 +1,11 @@
-import random
+import os
+import timeit
 import unittest
 
 import numpy as np
 import numpy.ma as ma
 import pandas as pd
+import xarray as xr
 
 import basd
 import basd.utils as util
@@ -177,7 +179,7 @@ class TestUtils(unittest.TestCase):
 
     def test_ccs_transfer_sim2obs_upper_bound_climatology(self):
         # Number of years in our data
-        n_years = 2
+        n_years = 20
 
         # Data arrays
         data_dict = {
