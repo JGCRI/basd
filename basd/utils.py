@@ -413,7 +413,7 @@ def get_data_in_window(window_center, data_loc, days, years, long_term_mean, par
         # Associated year for each data point in the resulting data
         years_this_window[key] = years[key][m]
         # Sample invalid values
-        replaced, invalid = sample_invalid_values(data_arr.values[m],
+        replaced, invalid = sample_invalid_values(data_arr[m],
                                                   seed=1,
                                                   if_all_invalid_use=params.if_all_invalid_use,
                                                   warn=params.invalid_value_warnings)
@@ -435,7 +435,7 @@ def get_data_in_month(month, data_loc, years, month_numbers, long_term_mean, par
         y = years[key]
         years_this_month[key] = None if y is None else y[m]
         # Sample invalid values
-        replaced, invalid = sample_invalid_values(data_arr.values[m],
+        replaced, invalid = sample_invalid_values(data_arr[m],
                                                   seed=1,
                                                   if_all_invalid_use=params.if_all_invalid_use,
                                                   warn=params.invalid_value_warnings)
@@ -543,9 +543,9 @@ def sample_invalid_values(a, seed=None, if_all_invalid_use=np.nan, warn=False):
 
     Returns
     -------
-    d_replaced: array
+    d_replaced: Array
         Result of invalid data replacement.
-    l_invalid: array
+    l_invalid: Array
         Boolean array indicating indices of replacement.
 
     """
