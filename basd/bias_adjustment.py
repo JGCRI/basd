@@ -328,7 +328,7 @@ class Adjustment:
         except AttributeError:
             AttributeError('Unable to convert calendar')
 
-        self.sim_fut_ba.to_netcdf(file, encoding=encoding)
+        self.sim_fut_ba.to_netcdf(file, encoding={self.variable: encoding})
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
