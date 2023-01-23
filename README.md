@@ -1,4 +1,4 @@
-[![build](https://github.com/JGCRI/basd/actions/workflows/build.yml/badge.svg)](https://github.com/JGCRI/basd/actions/workflows/build.yml)
+# Version of basd that was used to generate output for use in Xanthos in Jan 2023
 
 # basd
 
