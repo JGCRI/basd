@@ -1,20 +1,21 @@
 name: basd-env
+
 channels:
   - conda-forge
-  - bioconda
-  - defaults
+
 dependencies:
   - python=3.9
   - pip
+  - pytest
   - dask[complete]
   - esmpy
   - joblib
-  - matplotlib!=3.6.1,>=3.1
+  - matplotlib
   - netCDF4
-  - numpy>=1.23
+  - numpy
   - pandas
   - plotly
-  - PyYAML>=5.4.1
+  - PyYAML
   - rasterio
   - rioxarray
   - scipy
