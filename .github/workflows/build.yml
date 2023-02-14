@@ -41,7 +41,7 @@ jobs:
         - name: Update environment
           run: |
             mamba env update -n basd-env -f environment.yml
-            python setup.py install
+            conda develop
           if: steps.cache.outputs.cache-hit != 'true'
 
         - name: Run tests
