@@ -9,6 +9,7 @@ dependencies:
   - pip
   - setuptools
   - pytest
+  - pytest-cov
   - dask[complete]
   - esmpy
   - joblib
