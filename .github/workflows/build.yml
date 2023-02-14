@@ -41,7 +41,6 @@ jobs:
         - name: Update environment
           run: |
             mamba env update -n basd-env -f environment.yml
-            conda activate basd-env
             python -m pip install --upgrade pip
             pip install pytest-cov
             pip install -e .
