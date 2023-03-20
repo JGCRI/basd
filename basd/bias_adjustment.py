@@ -334,7 +334,7 @@ class Adjustment:
                 resample(time='1MS').\
                 mean(dim='time').\
                 chunk({'time': -1}).\
-                to_netcdf(file, encoding={self.variable: encoding})
+                to_netcdf(file, encoding={self.variable: encoding}, engine='netcdf4')
         else:
             # Try converting calendar back to input calendar
             try:
