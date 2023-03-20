@@ -244,7 +244,7 @@ class Adjustment:
         return result
 
     def adjust_bias(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                    file: str = None, encoding=None):
+                    file: str = None, monthly: bool=False, encoding=None):
         """
         Does bias adjustment at every location of input data
 
@@ -258,6 +258,8 @@ class Adjustment:
             Number of cells to include in chunk in lon direction
         encoding: dict
             Parameter for to_netcdf function
+        monthly: bool
+            Whether to aggregate to monthly data before saving
 
         Returns
         -------
@@ -304,11 +306,11 @@ class Adjustment:
         # If provided a path to save NetCDF file, save adjusted DataSet,
         # else just return the result
         if file:
-            self.save_adjustment_nc(file, encoding)
+            self.save_adjustment_nc(file, monthly, encoding)
         else:
             return self.sim_fut_ba
 
-    def save_adjustment_nc(self, file, encoding=None):
+    def save_adjustment_nc(self, file, monthly: bool = False, encoding=None):
         """
         Saves adjusted data to NetCDF file at specific path
 
@@ -318,17 +320,25 @@ class Adjustment:
             Location and name string to save output file
         encoding: dict
             Parameter for to_netcdf function
+        monthly: bool
+            Whether to aggregate to monthly data before saving
         """
+
         # Make sure we've computed
         self.sim_fut_ba = self.sim_fut_ba.persist()
 
-        # Try converting calendar back to input calendar
-        try:
-            self.sim_fut_ba = self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date')
-        except AttributeError:
-            AttributeError('Unable to convert calendar')
+        # If monthly, save monthly aggregation
+        if monthly:
+            # self.sim_fut_ba = self.sim_fut_ba.astype(float)
+            self.sim_fut_ba.astype(float).resample(time='1MS').mean(dim='time').to_netcdf(file, encoding={self.variable: encoding})
+        else:
+            # Try converting calendar back to input calendar
+            try:
+                self.sim_fut_ba = self.sim_fut_ba.convert_calendar(self.input_calendar, align_on='date')
+            except AttributeError:
+                AttributeError('Unable to convert calendar')
 
-        self.sim_fut_ba.to_netcdf(file, encoding={self.variable: encoding})
+            self.sim_fut_ba.to_netcdf(file, encoding={self.variable: encoding})
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
