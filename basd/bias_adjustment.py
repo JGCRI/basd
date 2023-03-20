@@ -330,7 +330,11 @@ class Adjustment:
         # If monthly, save monthly aggregation
         if monthly:
             # self.sim_fut_ba = self.sim_fut_ba.astype(float)
-            self.sim_fut_ba.astype(float).resample(time='1MS').mean(dim='time').to_netcdf(file, encoding={self.variable: encoding})
+            self.sim_fut_ba.astype(float).\
+                resample(time='1MS').\
+                mean(dim='time').\
+                chunk({'time': -1}).\
+                to_netcdf(file, encoding={self.variable: encoding})
         else:
             # Try converting calendar back to input calendar
             try:
