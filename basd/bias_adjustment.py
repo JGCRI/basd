@@ -355,7 +355,9 @@ class Adjustment:
             self.sim_fut_ba.astype(float).\
                 resample(time='1MS').\
                 mean(dim='time').\
-                to_netcdf(file, encoding={self.variable: encoding}, engine='netcdf4')
+                chunk({'time': -1}).\
+                to_netcdf(file, engine='netcdf4')
+                #to_netcdf(file, encoding={self.variable: encoding}, engine='netcdf4')
         else:
             # Try converting calendar back to input calendar
             try:
