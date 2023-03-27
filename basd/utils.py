@@ -44,7 +44,7 @@ def set_dim_names(datasets: dict):
         msg = f'{data_name} needs a latitude, longitude and time dimension'
         assert all(i in data.dims for i in ['lat', 'lon', 'time']), msg
 
-    return datasets
+    return datasets['obs_hist'], datasets['sim_hist'], datasets['sim_fut']
 
 
 def ma2a(a, raise_error: bool = False):
