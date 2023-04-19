@@ -185,6 +185,7 @@ def project_onto(to_project: xr.Dataset, template: xr.Dataset, variable: str, pe
     projected_array = regridder(to_project[variable])
 
     # Create new dataset object
-    projected_dataset = xr.Dataset({variable: projected_array})
+    projected_dataset = projected_array.to_dataset(name=variable)
+    # projected_dataset = xr.Dataset({variable: projected_array})
 
     return projected_dataset

@@ -1,6 +1,7 @@
 import datetime as dt
 import os
 
+from dask.diagnostics import ProgressBar
 import dask.array as da
 import numpy as np
 import xarray as xr
@@ -302,9 +303,6 @@ class Adjustment:
                                        days=days, month_numbers=month_numbers, years=years,
                                        dtype=object, chunks=self.sim_fut[self.variable].chunks)
 
-        # Compute bias adjustment in chunks
-        # ba_output_data.persist()
-
         # Save output
         self.sim_fut_ba[self.variable].data = ba_output_data
 
@@ -342,8 +340,10 @@ class Adjustment:
                 chunk({'time': -1}).\
                 copy()
 
-            temp.persist()
-            temp.to_netcdf(file, engine='netcdf4')
+            #temp.persist()
+            write_job = temp.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
+            with ProgressBar():
+                write_job.compute()
             del temp
                 #to_netcdf(file, encoding={self.variable: encoding}, engine='netcdf4')
         else:
@@ -353,7 +353,10 @@ class Adjustment:
             except AttributeError:
                 AttributeError('Unable to convert calendar')
 
-            self.sim_fut_ba.to_netcdf(file, encoding={self.variable: encoding})
+            write_job = self.sim_fut_ba.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
+            with ProgressBar():
+                write_job.compute()
+
 
 
 def running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params):
