@@ -50,6 +50,7 @@ class Adjustment:
         if remap_grid:
             # self.obs_hist = rg.match_grids(self.obs_hist, self.sim_hist, self.sim_fut)
             self.obs_hist = rg.project_onto(self.obs_hist, self.sim_hist, self.variable)
+            self.datasets['obs_hist'] = self.obs_hist
 
         # Forces data to have same spatial shape and resolution
         self.assert_consistency_of_data_resolution()
