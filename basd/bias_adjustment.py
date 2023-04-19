@@ -30,13 +30,21 @@ class Adjustment:
         self.variable = variable
         self.params = params
         self.input_calendar = sim_hist.time.dt.calendar
-
-        # Set dimension names to lat, lon, time
-        self.obs_hist, self.sim_hist, self.sim_fut = util.set_dim_names({
+        self.datasets = {
             'obs_hist': self.obs_hist,
             'sim_hist': self.sim_hist,
             'sim_fut': self.sim_fut
-        })
+        }
+
+        # Set dimension names to lat, lon, time
+        self.obs_hist, self.sim_hist, self.sim_fut = util.set_dim_names(self.datasets)
+
+        # Update dictionary
+        self.datasets = {
+            'obs_hist': self.obs_hist,
+            'sim_hist': self.sim_hist,
+            'sim_fut': self.sim_fut
+        }
 
         # Maps observational data onto simulated data grid resolution
         if remap_grid:
@@ -64,14 +72,7 @@ class Adjustment:
         available to the last Dec 31st available.
         """
 
-        # Create temp dict of datasets to iterate over
-        datasets = {
-            'obs_hist': self.obs_hist,
-            'sim_hist': self.sim_hist,
-            'sim_fut': self.sim_fut
-        }
-
-        for key, data in datasets.items():
+        for key, data in self.datasets.items():
             # Trim data to start Jan 1 and end Dec 31
             # Indexes of each Jan 1st and Dec 31st
             jan_first = data.time.dt.strftime("%m-%d") == '01-01'
@@ -82,22 +83,18 @@ class Adjustment:
             # Indexes to keep
             keep = [((i <= last) and (i >= first)) for i in range(jan_first.size)]
             # Selecting data
-            datasets[key] = data.sel(time=keep)
+            self.datasets[key] = data.sel(time=keep)
 
         # Updating data
-        self.obs_hist = datasets['obs_hist']
-        self.sim_hist = datasets['sim_hist']
-        self.sim_fut = datasets['sim_fut']
+        self.obs_hist = self.datasets['obs_hist']
+        self.sim_hist = self.datasets['sim_hist']
+        self.sim_fut = self.datasets['sim_fut']
 
         # Getting updated time info
-        days, month_numbers, years = util.time_scraping({
-            'obs_hist': self.obs_hist,
-            'sim_hist': self.sim_hist,
-            'sim_fut': self.sim_fut
-        })
+        days, month_numbers, years = util.time_scraping(self.datasets)
 
         # Asserting all years are here within range of first and last
-        for key, data in datasets.items():
+        for key, data in self.datasets.items():
             # Make sure years array is continuous
             year_arr = years[key]
             years_sorted_unique = np.unique(year_arr)
@@ -136,15 +133,8 @@ class Adjustment:
         min_lat = min([self.obs_hist.sizes.get('lat'), self.sim_hist.sizes.get('lat'), self.sim_fut.sizes.get('lat')])
         min_lon = min([self.obs_hist.sizes.get('lon'), self.sim_hist.sizes.get('lon'), self.sim_fut.sizes.get('lon')])
 
-        # Create temp dict of datasets to iterate over
-        datasets = {
-            'obs_hist': self.obs_hist,
-            'sim_hist': self.sim_hist,
-            'sim_fut': self.sim_fut
-        }
-
         # For each dataset, aggregate to the most coarse dataset if possible
-        for key, value in datasets.items():
+        for key, value in self.datasets.items():
             agg_lat = value.sizes.get('lat') / min_lat
             agg_lon = value.sizes.get('lon') / min_lon
             assert agg_lat == agg_lon, f'Data have differing shapes'
@@ -152,12 +142,12 @@ class Adjustment:
             agg_fact = int(agg_lat)
             if agg_fact > 1:
                 print(f'Aggregating {key} by a factor of {agg_fact}')
-                datasets[key] = value.coarsen(lat=agg_fact).mean().coarsen(lon=agg_fact).mean()
+                self.datasets[key] = value.coarsen(lat=agg_fact).mean().coarsen(lon=agg_fact).mean()
 
         # Save aggregated datasets
-        self.obs_hist = datasets['obs_hist']
-        self.sim_hist = datasets['sim_hist']
-        self.sim_fut = datasets['sim_fut']
+        self.obs_hist = self.datasets['obs_hist']
+        self.sim_hist = self.datasets['sim_hist']
+        self.sim_fut = self.datasets['sim_fut']
 
     def adjust_bias_one_location(self, i_loc, full_details=True):
         """
@@ -183,11 +173,7 @@ class Adjustment:
         sim_fut_loc = self.sim_fut[self.variable][i_loc]
 
         # Scraping the time from the data and turning into pandas date time array
-        days, month_numbers, years = util.time_scraping({
-            'obs_hist': self.obs_hist,
-            'sim_hist': self.sim_hist,
-            'sim_fut': self.sim_fut
-        })
+        days, month_numbers, years = util.time_scraping(self.datasets)
 
         # Put in dictionary for easy iteration
         data_loc = {
@@ -286,11 +272,7 @@ class Adjustment:
 
         """
         # Get days, months and years data
-        days, month_numbers, years = util.time_scraping({
-            'obs_hist': self.obs_hist,
-            'sim_hist': self.sim_hist,
-            'sim_fut': self.sim_fut
-        })
+        days, month_numbers, years = util.time_scraping(self.datasets)
 
         if lat_chunk_size & lon_chunk_size:
             # Manual chunk method
