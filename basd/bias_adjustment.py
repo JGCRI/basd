@@ -38,7 +38,10 @@ class Adjustment:
         }
 
         # Set dimension names to lat, lon, time
-        self.obs_hist, self.sim_hist, self.sim_fut = util.set_dim_names(self.datasets)
+        self.datasets = util.set_dim_names(self.datasets)
+        self.obs_hist = self.datasets['obs_hist']
+        self.sim_hist = self.datasets['sim_hist']
+        self.sim_fut = self.datasets['sim_fut']
 
         # Update dictionary
         self.datasets = {
