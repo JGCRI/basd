@@ -148,7 +148,8 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
     # Do the regridding and save as new coarse dataset
     coarse_to_finer_regridder = xesmf.Regridder(sim_coarse, new_grid, 'bilinear', periodic=True)
     sim_coarse_arr = coarse_to_finer_regridder(sim_coarse[variable])
-    sim_coarse = xr.Dataset({variable: sim_coarse_arr})
+    # sim_coarse = xr.Dataset({variable: sim_coarse_arr})
+    sim_coarse = sim_coarse_arr.to_dataset(name=variable)
 
     return sim_coarse
 

@@ -45,14 +45,14 @@ class Downscaler:
         self.datasets = {
             'obs_fine': self.obs_fine,
             'sim_coarse': self.sim_coarse,
-            'sim_fine': self.obs_fine
+            # 'sim_fine': self.obs_fine.copy()
         }
 
         # Set dimension names to lat, lon, time
         self.datasets = util.set_dim_names(self.datasets)
         self.obs_fine = self.datasets['obs_fine']
         self.sim_coarse = self.datasets['sim_coarse']
-        self.sim_fine = self.datasets['sim_fine']
+        # self.sim_fine = self.datasets['sim_fine']
 
         # TODO: Perhaps move the sum_weights and CRE_matrix generation to the downscaling function
         #       rather than happening on init.
