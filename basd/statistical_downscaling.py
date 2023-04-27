@@ -2,6 +2,7 @@ import os
 import warnings
 
 import dask.array as da
+from dask.diagnostics import ProgressBar
 import numpy as np
 import scipy.linalg as spl
 import xarray as xr
@@ -205,7 +206,7 @@ class Downscaler:
         return result
 
     def downscale(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                  file: str = None, encoding=None):
+                  file: str = None, encoding=None, monthly: bool=False):
         """
         Function to downscale climate data using MBCn_SD method
 
@@ -266,11 +267,11 @@ class Downscaler:
         self.sim_fine[self.variable].data = ba_output_data
 
         if file:
-            self.save_downscale_nc(file, encoding)
+            self.save_downscale_nc(file, encoding, monthly)
 
         return self.sim_fine
 
-    def save_downscale_nc(self, file, encoding=None):
+    def save_downscale_nc(self, file, encoding=None, monthly: bool=False):
         """
         Saves Downscaled data to NetCDF files at specific path
 
@@ -284,13 +285,29 @@ class Downscaler:
         # Make sure we've computed
         self.sim_fine = self.sim_fine.persist()
 
-        # Try converting calendar back to input calendar
-        try:
-            self.sim_fine = self.sim_fine.convert_calendar(self.input_calendar, align_on='date')
-        except AttributeError:
-            AttributeError('Unable to convert calendar')
+                # If monthly, save monthly aggregation
+        if monthly:
+            # self.sim_fut_ba = self.sim_fut_ba.astype(float)
+            # temp = self.sim_fut_ba.resample(time='1MS').\
+            temp = self.sim_fine.astype(float).\
+                resample(time='1MS').\
+                mean(dim='time').\
+                chunk({'time': -1}).\
+                copy()
+            write_job = temp.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
+            with ProgressBar():
+                write_job.compute()
+            del temp
+        else:
+            # Try converting calendar back to input calendar
+            try:
+                self.sim_fine = self.sim_fine.convert_calendar(self.input_calendar, align_on='date')
+            except AttributeError:
+                AttributeError('Unable to convert calendar')
 
-        self.sim_fine.to_netcdf(file, encoding={self.variable: encoding})
+            write_job = self.sim_fine.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
+            with ProgressBar():
+                write_job.compute()
 
 
 def get_data_at_loc(loc,
