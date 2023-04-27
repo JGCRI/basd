@@ -65,7 +65,7 @@ class Downscaler:
 
         # Set downscaled grid as copy of fine grid for now
         # self.sim_fine = rg.interpolate_for_downscaling(self.obs_fine, self.sim_coarse)
-        self.sim_fine = rg.project_onto(self.sim_coarse, self.obs_fine, self.variable)
+        self.sim_fine: xr.Dataset = rg.project_onto(self.sim_coarse, self.obs_fine, self.variable)
 
         # Update dictionary
         self.datasets['sim_fine'] = self.sim_fine
@@ -175,7 +175,7 @@ class Downscaler:
         """
 
         # Get days, months and years data
-        # days, month_numbers, years = util.time_scraping(self.datasets)
+        #days, month_numbers, years = util.time_scraping(self.datasets)
 
         # Get data at location
         data, sum_weights_loc = get_data_at_loc(i_loc,
@@ -200,13 +200,13 @@ class Downscaler:
 
         # Result in flattened format
         result = downscale_month_by_month(data, sum_weights_loc,
-                                          long_term_mean, month_numbers,
+                                          long_term_mean, self.month_numbers,
                                           self.rotation_matrices, self.params)
 
         # Reshape to grid
         result = result.T.reshape((self.downscaling_factors['lat'],
                                    self.downscaling_factors['lon'],
-                                   month_numbers['sim_fine'].size))
+                                   self.month_numbers['sim_fine'].size))
 
         return result
 
@@ -245,10 +245,11 @@ class Downscaler:
         self.obs_fine[self.variable] = self.obs_fine[self.variable].transpose('lat', 'lon', 'time')
         self.sim_fine[self.variable] = self.sim_fine[self.variable].transpose('lat', 'lon', 'time')
         self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lat', 'lon', 'time')
+        self.sim_fine_out = self.sim_fine.copy()
 
         # Chunk fine data
-        self.obs_fine = self.obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1)).persist()
-        self.sim_fine = self.sim_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1)).persist()
+        self.obs_fine = self.obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))#.persist()
+        self.sim_fine = self.sim_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))#.persist()
 
         # Chunk grid area cell weights
         fine_size = tuple((self.obs_fine.sizes['lat'], self.obs_fine.sizes['lon'], 1))
@@ -269,7 +270,7 @@ class Downscaler:
                                        rotation_matrices=self.rotation_matrices,
                                        dtype=object, chunks=self.sim_fine[self.variable].chunks)
 
-        self.sim_fine[self.variable].data = ba_output_data
+        self.sim_fine_out[self.variable].data = ba_output_data
 
         if file:
             self.save_downscale_nc(file, encoding, monthly)
@@ -288,13 +289,13 @@ class Downscaler:
             Parameter for to_netcdf function
         """
         # Make sure we've computed
-        self.sim_fine = self.sim_fine.persist()
+        self.sim_fine_out = self.sim_fine_out.persist()
 
                 # If monthly, save monthly aggregation
         if monthly:
             # self.sim_fut_ba = self.sim_fut_ba.astype(float)
             # temp = self.sim_fut_ba.resample(time='1MS').\
-            temp = self.sim_fine.astype(float).\
+            temp = self.sim_fine_out.astype(float).\
                 resample(time='1MS').\
                 mean(dim='time').\
                 chunk({'time': -1}).\
@@ -306,11 +307,11 @@ class Downscaler:
         else:
             # Try converting calendar back to input calendar
             try:
-                self.sim_fine = self.sim_fine.convert_calendar(self.input_calendar, align_on='date')
+                self.sim_fine_out = self.sim_fine_out.convert_calendar(self.input_calendar, align_on='date')
             except AttributeError:
                 AttributeError('Unable to convert calendar')
 
-            write_job = self.sim_fine.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
+            write_job = self.sim_fine_out.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
             with ProgressBar():
                 write_job.compute()
 
