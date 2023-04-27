@@ -86,6 +86,11 @@ class Downscaler:
         # Size of coarse data
         self.coarse_sizes = self.sim_coarse.sizes
 
+        # Get time details
+        self.days, self.month_numbers, self.years = util.time_scraping(self.datasets)
+        del self.datasets
+
+
     def analyze_input_grids(self):
         """
         Asserts that grids are of compatible sizes, and returns scaling factors,
@@ -170,14 +175,14 @@ class Downscaler:
         """
 
         # Get days, months and years data
-        days, month_numbers, years = util.time_scraping(self.datasets)
+        # days, month_numbers, years = util.time_scraping(self.datasets)
 
         # Get data at location
         data, sum_weights_loc = get_data_at_loc(i_loc,
                                                 self.obs_fine[self.variable].data,
                                                 self.sim_coarse[self.variable].data,
                                                 self.sim_fine[self.variable].data,
-                                                month_numbers, self.downscaling_factors, self.sum_weights)
+                                                self.month_numbers, self.downscaling_factors, self.sum_weights)
 
         # abort here if there are only missing values in at least one time series
         # do not abort though if the if_all_invalid_use option has been specified
@@ -227,7 +232,7 @@ class Downscaler:
             Downscaled data. Same spatial resolution as input obs_fine
         """
         # Get days, months and years data
-        days, month_numbers, years = util.time_scraping(self.datasets)
+        # days, month_numbers, years = util.time_scraping(self.datasets)
 
         # Chunk coarse data
         self.sim_coarse = self.sim_coarse.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1))
@@ -259,7 +264,7 @@ class Downscaler:
                                        self.sim_fine[self.variable].data,
                                        chunk_sum_weights,
                                        params=self.params,
-                                       month_numbers=month_numbers,
+                                       month_numbers=self.month_numbers,
                                        downscaling_factors=self.downscaling_factors,
                                        rotation_matrices=self.rotation_matrices,
                                        dtype=object, chunks=self.sim_fine[self.variable].chunks)
