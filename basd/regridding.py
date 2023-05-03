@@ -139,7 +139,7 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
                          lon_b2 - coarse_lon_delta / 2 + f_lon * fine_lon_delta / 2,
                          f_lon * fine_lon_delta)
 
-    new_grid = xr.Dataset({'lat': new_lats, 'lon': new_lons})
+    new_grid = xr.Dataset(coords = {'lat': new_lats, 'lon': new_lons})
 
     # Create new sequence of coordinates for xesmf regridder
     #new_grid = xesmf.util.grid_2d(lon_b1, lon_b2, f_lon * fine_lon_delta,

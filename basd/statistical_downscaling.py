@@ -2,6 +2,7 @@ import os
 import warnings
 
 import dask.array as da
+from dask.distributed import progress
 from dask.diagnostics import ProgressBar
 import numpy as np
 import scipy.linalg as spl
@@ -45,14 +46,17 @@ class Downscaler:
         self.datasets = {
             'obs_fine': self.obs_fine,
             'sim_coarse': self.sim_coarse,
-            # 'sim_fine': self.obs_fine.copy()
+            'sim_fine': self.sim_coarse.copy()
         }
 
         # Set dimension names to lat, lon, time
         self.datasets = util.set_dim_names(self.datasets)
         self.obs_fine = self.datasets['obs_fine']
         self.sim_coarse = self.datasets['sim_coarse']
-        # self.sim_fine = self.datasets['sim_fine']
+
+        # Get time details
+        self.days, self.month_numbers, self.years = util.time_scraping(self.datasets)
+        del self.datasets
 
         # TODO: Perhaps move the sum_weights and CRE_matrix generation to the downscaling function
         #       rather than happening on init.
@@ -68,8 +72,8 @@ class Downscaler:
         self.sim_fine: xr.Dataset = rg.project_onto(self.sim_coarse, self.obs_fine, self.variable)
 
         # Update dictionary
-        self.datasets['sim_fine'] = self.sim_fine
-        self.datasets['sim_coarse'] = self.sim_coarse
+        # self.datasets['sim_fine'] = self.sim_fine
+        # self.datasets['sim_coarse'] = self.sim_coarse
 
         # Grid cell weights by global area
         sum_weights = self.grid_cell_weights()
@@ -87,8 +91,8 @@ class Downscaler:
         self.coarse_sizes = self.sim_coarse.sizes
 
         # Get time details
-        self.days, self.month_numbers, self.years = util.time_scraping(self.datasets)
-        del self.datasets
+        # self.days, self.month_numbers, self.years = util.time_scraping(self.datasets)
+        # del self.datasets
 
 
     def analyze_input_grids(self):
@@ -243,13 +247,16 @@ class Downscaler:
 
         # Order dimensions lon, lat, time
         self.obs_fine[self.variable] = self.obs_fine[self.variable].transpose('lat', 'lon', 'time')
+        # progress(self.obs_fine[self.variable])
         self.sim_fine[self.variable] = self.sim_fine[self.variable].transpose('lat', 'lon', 'time')
+        # progress(self.sim_fine[self.variable])
         self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lat', 'lon', 'time')
-        self.sim_fine_out = self.sim_fine.copy()
+        # progress(self.sim_coarse[self.variable])
 
         # Chunk fine data
         self.obs_fine = self.obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))#.persist()
         self.sim_fine = self.sim_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))#.persist()
+        self.sim_fine_out = self.sim_fine.copy()
 
         # Chunk grid area cell weights
         fine_size = tuple((self.obs_fine.sizes['lat'], self.obs_fine.sizes['lon'], 1))
@@ -291,7 +298,7 @@ class Downscaler:
         # Make sure we've computed
         self.sim_fine_out = self.sim_fine_out.persist()
 
-                # If monthly, save monthly aggregation
+        # If monthly, save monthly aggregation
         if monthly:
             # self.sim_fut_ba = self.sim_fut_ba.astype(float)
             # temp = self.sim_fut_ba.resample(time='1MS').\
@@ -311,9 +318,10 @@ class Downscaler:
             except AttributeError:
                 AttributeError('Unable to convert calendar')
 
-            write_job = self.sim_fine_out.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
-            with ProgressBar():
-                write_job.compute()
+            self.sim_fine_out.to_netcdf(file)#, encoding={self.variable: encoding})
+            # write_job = self.sim_fine_out.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
+            # with ProgressBar():
+            #     write_job.compute()
 
 
 def get_data_at_loc(loc,
