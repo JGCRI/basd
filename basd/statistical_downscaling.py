@@ -595,13 +595,16 @@ def init_downscaling(obs_fine: xr.Dataset,
                             for _ in range(params.n_iterations)]
 
     # Save intermediate arrays
-    obs_fine_write = obs_fine.to_zarr(os.path.join(temp_path, 'obs_fine_init.zarr'), compute=False, mode='w')
+    obs_fine_write = obs_fine.chunk(dict(lon=720, lat=360, time=1)).\
+        to_zarr(os.path.join(temp_path, 'obs_fine_init.zarr'), compute=False, mode='w')
     with ProgressBar:
         obs_fine_write.compute()
-    sim_fine_write = sim_fine.to_zarr(os.path.join(temp_path, 'sim_fine_init.zarr'), compute=False, mode='w')
+    sim_fine_write = sim_fine.chunk(dict(time=1)).\
+        to_zarr(os.path.join(temp_path, 'sim_fine_init.zarr'), compute=False, mode='w')
     with ProgressBar:
         sim_fine_write.compute()
-    sim_coarse_write = sim_coarse.to_zarr(os.path.join(temp_path, 'sim_coarse_init.zarr'), compute=False, mode='w')
+    sim_coarse_write = sim_coarse.chunk(dict(time=1)).\
+        to_zarr(os.path.join(temp_path, 'sim_coarse_init.zarr'), compute=False, mode='w')
     with ProgressBar:
         sim_coarse_write.compute()
 
