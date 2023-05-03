@@ -90,78 +90,6 @@ class Downscaler:
         # Size of coarse data
         self.coarse_sizes = self.sim_coarse.sizes
 
-        # Get time details
-        # self.days, self.month_numbers, self.years = util.time_scraping(self.datasets)
-        # del self.datasets
-
-
-    def analyze_input_grids(self):
-        """
-        Asserts that grids are of compatible sizes, and returns scaling factors,
-        direction of coordinate sequence, and whether the sequence is circular
-
-        Returns
-        -------
-        downscaling_factors: dict
-        """
-        # Coordinate sequences
-        fine_lats = self.obs_fine.coords['lat'].values
-        fine_lons = self.obs_fine.coords['lon'].values
-        coarse_lats = self.sim_coarse.coords['lat'].values
-        coarse_lons = self.sim_coarse.coords['lon'].values
-
-        # Assert that fine grid is a multiple of the coarse
-        assert len(fine_lats) % len(coarse_lats) == 0
-        assert len(fine_lons) % len(coarse_lons) == 0
-
-        # Get the downscaling factors
-        f_lat = len(fine_lats) // len(coarse_lats)
-        f_lon = len(fine_lons) // len(coarse_lons)
-
-        # Assert that we really are trying to downscale (not stay the same or upscale)
-        assert f_lat > 1 or f_lon > 1, f'No downscaling needed. Observational grid provides no finer resolution'
-
-        # Step sizes in coordinate sequences
-        coarse_lat_deltas = np.diff(coarse_lats)
-        fine_lat_deltas = np.diff(fine_lats)
-        coarse_lon_deltas = np.diff(coarse_lons)
-        fine_lon_deltas = np.diff(fine_lons)
-
-        # Assert that the sequences move in the same direction and are monotone
-        assert (np.all(coarse_lat_deltas > 0) and np.all(fine_lat_deltas > 0)) or \
-               (np.all(coarse_lat_deltas < 0) and np.all(fine_lat_deltas < 0)), f'Latitude coords should be ' \
-                                                                                f'monotonic in the same direction.'
-        assert (np.all(coarse_lon_deltas > 0) and np.all(fine_lon_deltas > 0)) or \
-               (np.all(coarse_lon_deltas < 0) and np.all(fine_lon_deltas < 0)), f'Longitude coords should be ' \
-                                                                                f'monotonic in the same direction.'
-
-        # Assert a constant delta in sequences
-        assert np.allclose(coarse_lat_deltas, coarse_lat_deltas[0]) and np.allclose(
-            fine_lat_deltas, fine_lat_deltas[0]), f'Resolution should be constant for all latitude'
-        assert np.allclose(coarse_lon_deltas, coarse_lon_deltas[0]) and np.allclose(
-            fine_lon_deltas, fine_lon_deltas[0]), f'Resolution should be constant for all longitude'
-
-        # Save the scaling factors
-        scale_factors = {
-            'lat': f_lat,
-            'lon': f_lon
-        }
-
-        return scale_factors
-
-    def grid_cell_weights(self):
-        """
-        Function for finding the weight of each grid cell based on global grid area
-
-        Returns
-        -------
-        sum_weights: np.array
-        """
-        lats = self.obs_fine.coords['lat'].values
-        weight_by_lat = np.cos(np.deg2rad(lats))
-
-        return weight_by_lat
-
     def downscale_one_location(self, i_loc: dict):
         """
         Function to downscale a single coarse grid cell
@@ -584,7 +512,6 @@ def downscale_one_month(data_this_month, rotation_matrices,
     return sim_fine
 
 
-# noinspection PyTupleAssignmentBalance
 def generate_cre_matrix(n: int):
     """
     Parameters
@@ -601,3 +528,158 @@ def generate_cre_matrix(n: int):
     q, r = spl.qr(z)  # QR decomposition
     d = np.diagonal(r)
     return q * (d / np.abs(d))
+
+def init_downscaling(obs_fine: xr.Dataset,
+                     sim_coarse: xr.Dataset,
+                     variable: str,
+                     params: Parameters,
+                     temp_path: str = 'basd_temp_path',
+                     clear_temp: bool = True,
+                     periodic: bool = True):
+    """
+    Parameters
+    ----------
+    obs_fine: xr.Dataset
+        Fine grid of observational data
+    sim_coarse: xr.Dataset
+        Coarse grid of simulated data
+    variable: str
+        Name of the variable of interest
+    params: Parameters
+        Object that specifies the parameters for the variable's SD routine
+    temp_path: str
+        path to directory where intermediate files are stored
+    clear_temp: bool
+        whether or not to clear temporary directory once finished
+    """
+
+    # Set base input data
+    obs_fine = obs_fine.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
+    sim_coarse = sim_coarse.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
+
+    # Input calendar of the simulation model
+    input_calendar = sim_coarse.time.dt.calendar
+
+    # Dictionary of datasets to iterate through easily
+    datasets = {
+        'obs_fine': obs_fine,
+        'sim_coarse': sim_coarse,
+        'sim_fine': sim_coarse.copy()
+    }
+
+    # Set dimension names to lat, lon, time
+    datasets = util.set_dim_names(datasets)
+    obs_fine = datasets['obs_fine']
+    sim_coarse = datasets['sim_coarse']
+
+    # Get time details
+    days, month_numbers, years = util.time_scraping(datasets)
+    del datasets
+
+    # Interpolate coarse grid to be conforming with fine grid
+    sim_coarse = rg.reproject_for_integer_factors(obs_fine, sim_coarse, variable, periodic)
+
+    # Analyze input grids
+    downscaling_factors = analyze_input_grids(obs_fine, sim_coarse)
+
+    # Set downscaled grid as copy of fine grid for now
+    sim_fine: xr.Dataset = rg.project_onto(sim_coarse, obs_fine, variable, periodic)
+
+    # Grid cell weights by global area
+    sum_weights = grid_cell_weights(obs_fine.coords['lat'].values)
+
+    # get list of rotation matrices to be used for all locations and months
+    if params.randomization_seed is not None:
+        np.random.seed(params.randomization_seed)
+    rotation_matrices = [generate_cre_matrix(downscaling_factors['lat'] * downscaling_factors['lon'])
+                            for _ in range(params.n_iterations)]
+
+    # Save intermediate arrays
+    obs_fine_write = obs_fine.to_zarr(os.path.join(temp_path, 'obs_fine_init.zarr'), compute=False, mode='w')
+    with ProgressBar:
+        obs_fine_write.compute()
+    sim_fine_write = sim_fine.to_zarr(os.path.join(temp_path, 'sim_fine_init.zarr'), compute=False, mode='w')
+    with ProgressBar:
+        sim_fine_write.compute()
+    sim_coarse_write = sim_coarse.to_zarr(os.path.join(temp_path, 'sim_coarse_init.zarr'), compute=False, mode='w')
+    with ProgressBar:
+        sim_coarse_write.compute()
+
+    obs_fine.close()
+    sim_fine.close()
+    sim_coarse.close()
+
+    # Return info that needs to be tracked
+    return input_calendar, sum_weights, rotation_matrices, days, month_numbers, years
+
+def analyze_input_grids(obs_fine, sim_coarse):
+    """
+    Asserts that grids are of compatible sizes, and returns scaling factors,
+    direction of coordinate sequence, and whether the sequence is circular
+
+    Returns
+    -------
+    downscaling_factors: dict
+    """
+    # Coordinate sequences
+    fine_lats = obs_fine.coords['lat'].values
+    fine_lons = obs_fine.coords['lon'].values
+    coarse_lats = sim_coarse.coords['lat'].values
+    coarse_lons = sim_coarse.coords['lon'].values
+
+    # Assert that fine grid is a multiple of the coarse
+    assert len(fine_lats) % len(coarse_lats) == 0
+    assert len(fine_lons) % len(coarse_lons) == 0
+
+    # Get the downscaling factors
+    f_lat = len(fine_lats) // len(coarse_lats)
+    f_lon = len(fine_lons) // len(coarse_lons)
+
+    # Assert that we really are trying to downscale (not stay the same or upscale)
+    assert f_lat > 1 or f_lon > 1, f'No downscaling needed. Observational grid provides no finer resolution'
+
+    # Step sizes in coordinate sequences
+    coarse_lat_deltas = np.diff(coarse_lats)
+    fine_lat_deltas = np.diff(fine_lats)
+    coarse_lon_deltas = np.diff(coarse_lons)
+    fine_lon_deltas = np.diff(fine_lons)
+
+    # Assert that the sequences move in the same direction and are monotone
+    assert (np.all(coarse_lat_deltas > 0) and np.all(fine_lat_deltas > 0)) or \
+            (np.all(coarse_lat_deltas < 0) and np.all(fine_lat_deltas < 0)), f'Latitude coords should be ' \
+                                                                            f'monotonic in the same direction.'
+    assert (np.all(coarse_lon_deltas > 0) and np.all(fine_lon_deltas > 0)) or \
+            (np.all(coarse_lon_deltas < 0) and np.all(fine_lon_deltas < 0)), f'Longitude coords should be ' \
+                                                                            f'monotonic in the same direction.'
+
+    # Assert a constant delta in sequences
+    assert np.allclose(coarse_lat_deltas, coarse_lat_deltas[0]) and np.allclose(
+        fine_lat_deltas, fine_lat_deltas[0]), f'Resolution should be constant for all latitude'
+    assert np.allclose(coarse_lon_deltas, coarse_lon_deltas[0]) and np.allclose(
+        fine_lon_deltas, fine_lon_deltas[0]), f'Resolution should be constant for all longitude'
+
+    # Save the scaling factors
+    scale_factors = {
+        'lat': f_lat,
+        'lon': f_lon
+    }
+
+    return scale_factors
+
+def grid_cell_weights(lats):
+    """
+    Function for finding the weight of each grid cell based on global grid area
+
+    Parameters
+    ----------
+    lats: np.array
+        numpy array of latitudes of fine grid
+
+    Returns
+    -------
+    weight_by_lat: np.array
+        numpy array of grid cell area by latitude for cells in fine grid
+    """
+    weight_by_lat = np.cos(np.deg2rad(lats))
+
+    return weight_by_lat

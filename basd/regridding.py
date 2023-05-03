@@ -85,7 +85,7 @@ def interpolate_for_downscaling(obs_fine: xr.Dataset, sim_coarse: xr.Dataset):
     return sim_fine
 
 
-def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, variable: str):
+def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, variable: str, periodic: bool = True):
     """
     Re-projects grids if necessary so that downscaling factors are positive integers
 
@@ -146,7 +146,7 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
     #                              lat_b1, lat_b2, f_lat * fine_lat_delta)
 
     # Do the regridding and save as new coarse dataset
-    coarse_to_finer_regridder = xesmf.Regridder(sim_coarse, new_grid, 'bilinear', periodic=True)
+    coarse_to_finer_regridder = xesmf.Regridder(sim_coarse, new_grid, 'bilinear', periodic=periodic)
     sim_coarse_arr = coarse_to_finer_regridder(sim_coarse[variable])
     # sim_coarse = xr.Dataset({variable: sim_coarse_arr})
     sim_coarse = sim_coarse_arr.to_dataset(name=variable)
