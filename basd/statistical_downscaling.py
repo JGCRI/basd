@@ -4,7 +4,6 @@ import warnings
 
 import dask.array as da
 from dask.distributed import progress
-from dask.diagnostics import ProgressBar
 import numpy as np
 import scipy.linalg as spl
 import xarray as xr
@@ -313,8 +312,15 @@ def init_downscaling(obs_fine: xr.Dataset,
         Object that specifies the parameters for the variable's SD routine
     temp_path: str
         path to directory where intermediate files are stored
-    clear_temp: bool
-        whether or not to clear temporary directory once finished
+    time_chunk: int
+        size of chunks in time dimension before writing to zarr. Should be large for speed, but just small enough to fit into memory if that's an issue. Otherwise not important.
+    periodic: bool
+        Whether grid wraps around globe longitudinally. Used during regridding interpolation.
+
+    Returns
+    -------
+    init_output: dict
+        Dictionary of details that need to be passed along into the downscaling process
     """
 
     # Set base input data
@@ -531,9 +537,9 @@ def downscale(init_output, clear_temp: bool = True,
 
     # If an output file is provided, write data to that file as .nc
     if file:
-        save_downscale_nc(sim_fine_out, init_output['variable'], file, encoding, monthly)
+        save_downscale_nc(sim_fine_out, init_output['variable'], file, init_output['input_calendar'], encoding, monthly)
 
-    # Clear the temporary directoy. Optional but happens by default
+    # Clear the temporary directory. Optional but happens by default
     if clear_temp:
         try:
             shutil.rmtree(init_output['temp_path'])
@@ -573,8 +579,7 @@ def save_downscale_nc(sim_fine_out, variable, file, input_calendar, encoding=Non
         except AttributeError:
             AttributeError('Unable to convert calendar')
 
-        write_job = sim_fine_out.to_netcdf(file, compute=True)#, encoding={self.variable: encoding})
-        # write_job = self.sim_fine_out.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
+        write_job = sim_fine_out.to_netcdf(file, encoding={variable: encoding}, compute=True)
         progress(write_job)
 
 
