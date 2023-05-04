@@ -1,4 +1,5 @@
 import os
+import shutil
 import warnings
 
 import dask.array as da
@@ -531,7 +532,7 @@ def downscale(init_output, clear_temp: bool = True,
     # Clear the temporary directoy. Optional but happens by default
     if clear_temp:
         try:
-            os.rmdir(init_output['temp_path'])
+            shutil.rmtree(init_output['temp_path'])
         except OSError as e:
             print("Error: %s : %s" % (init_output['temp_path'], e.strerror))
 
