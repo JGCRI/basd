@@ -14,244 +14,6 @@ import basd.sd_utils as sdu
 import basd.utils as util
 
 
-class Downscaler:
-    def __init__(self,
-                 obs_fine: xr.Dataset,
-                 sim_coarse: xr.Dataset,
-                 variable: str,
-                 params: Parameters):
-        """
-        Parameters
-        ----------
-        obs_fine: xr.Dataset
-            Fine grid of observational data
-        sim_coarse: xr.Dataset
-            Coarse grid of simulated data
-        variable: str
-            Name of the variable of interest
-        params: Parameters
-            Object that specifies the parameters for the variable's SD routine
-        """
-
-        # Set base input data
-        self.obs_fine = obs_fine.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
-        self.sim_coarse = sim_coarse.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
-        self.params = params
-        self.variable = variable
-
-        # Input calendar of the simulation model
-        self.input_calendar = sim_coarse.time.dt.calendar
-
-        # Dictionary of datasets to iterate through easily
-        self.datasets = {
-            'obs_fine': self.obs_fine,
-            'sim_coarse': self.sim_coarse,
-            'sim_fine': self.sim_coarse.copy()
-        }
-
-        # Set dimension names to lat, lon, time
-        self.datasets = util.set_dim_names(self.datasets)
-        self.obs_fine = self.datasets['obs_fine']
-        self.sim_coarse = self.datasets['sim_coarse']
-
-        # Get time details
-        self.days, self.month_numbers, self.years = util.time_scraping(self.datasets)
-        del self.datasets
-
-        # TODO: Perhaps move the sum_weights and CRE_matrix generation to the downscaling function
-        #       rather than happening on init.
-
-        # TODO: Actually figure out the remapping/resolution matching process
-        self.sim_coarse = rg.reproject_for_integer_factors(self.obs_fine, self.sim_coarse, self.variable)
-
-        # Analyze input grids
-        self.downscaling_factors = self.analyze_input_grids()
-
-        # Set downscaled grid as copy of fine grid for now
-        # self.sim_fine = rg.interpolate_for_downscaling(self.obs_fine, self.sim_coarse)
-        self.sim_fine: xr.Dataset = rg.project_onto(self.sim_coarse, self.obs_fine, self.variable)
-
-        # Update dictionary
-        # self.datasets['sim_fine'] = self.sim_fine
-        # self.datasets['sim_coarse'] = self.sim_coarse
-
-        # Grid cell weights by global area
-        sum_weights = self.grid_cell_weights()
-
-        # get list of rotation matrices to be used for all locations and months
-        if params.randomization_seed is not None:
-            np.random.seed(params.randomization_seed)
-        rotation_matrices = [generate_cre_matrix(self.downscaling_factors['lat'] * self.downscaling_factors['lon'])
-                             for _ in range(params.n_iterations)]
-
-        self.rotation_matrices = rotation_matrices
-        self.sum_weights = sum_weights
-
-        # Size of coarse data
-        self.coarse_sizes = self.sim_coarse.sizes
-
-    def downscale_one_location(self, i_loc: dict):
-        """
-        Function to downscale a single coarse grid cell
-
-        Parameters
-        ----------
-        i_loc: dict
-            Dictionary of lat, lon index, for coarse cell
-
-        Returns
-        -------
-        sim_fine_loc: ndarray
-            3D array of downscaled coarse grid. Size is latitude scaling factor by longitude scaling
-            factor by time
-        """
-
-        # Get days, months and years data
-        #days, month_numbers, years = util.time_scraping(self.datasets)
-
-        # Get data at location
-        data, sum_weights_loc = get_data_at_loc(i_loc,
-                                                self.obs_fine[self.variable].data,
-                                                self.sim_coarse[self.variable].data,
-                                                self.sim_fine[self.variable].data,
-                                                self.month_numbers, self.downscaling_factors, self.sum_weights)
-
-        # abort here if there are only missing values in at least one time series
-        # do not abort though if the if_all_invalid_use option has been specified
-        if np.isnan(self.params.if_all_invalid_use):
-            if sdu.only_missing_values_in_at_least_one_time_series(data):
-                warnings.warn(f'{i_loc} skipped due to missing data')
-                return None
-
-        # compute mean value over all time steps for invalid value sampling
-        long_term_mean = {}
-        for key, d in data.items():
-            long_term_mean[key] = util.average_valid_values(d, self.params.if_all_invalid_use,
-                                                            self.params.lower_bound, self.params.lower_threshold,
-                                                            self.params.upper_bound, self.params.upper_threshold)
-
-        # Result in flattened format
-        result = downscale_month_by_month(data, sum_weights_loc,
-                                          long_term_mean, self.month_numbers,
-                                          self.rotation_matrices, self.params)
-
-        # Reshape to grid
-        result = result.T.reshape((self.downscaling_factors['lat'],
-                                   self.downscaling_factors['lon'],
-                                   self.month_numbers['sim_fine'].size))
-
-        return result
-
-    def downscale(self, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                  file: str = None, encoding=None, monthly: bool=False):
-        """
-        Function to downscale climate data using MBCn_SD method
-
-        Parameters
-        ----------
-        file: str
-            Location and name string to save output file
-        lat_chunk_size: int
-            Number of cells to include in chunk in lat direction
-        lon_chunk_size: int
-            Number of cells to include in chunk in lon direction
-        encoding: dict
-            Parameter for save as netcdf function
-
-        Returns
-        -------
-        sim_fine: xr.Dataset
-            Downscaled data. Same spatial resolution as input obs_fine
-        """
-        # Get days, months and years data
-        # days, month_numbers, years = util.time_scraping(self.datasets)
-
-        # Chunk coarse data
-        self.sim_coarse = self.sim_coarse.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1))
-
-        # Get corresponding chunks for coarse data
-        fine_lon_chunk_size = lon_chunk_size * self.downscaling_factors['lon']
-        fine_lat_chunk_size = lat_chunk_size * self.downscaling_factors['lat']
-
-        # Order dimensions lon, lat, time
-        self.obs_fine[self.variable] = self.obs_fine[self.variable].transpose('lat', 'lon', 'time')
-        # progress(self.obs_fine[self.variable])
-        self.sim_fine[self.variable] = self.sim_fine[self.variable].transpose('lat', 'lon', 'time')
-        # progress(self.sim_fine[self.variable])
-        self.sim_coarse[self.variable] = self.sim_coarse[self.variable].transpose('lat', 'lon', 'time')
-        # progress(self.sim_coarse[self.variable])
-
-        # Chunk fine data
-        self.obs_fine = self.obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))#.persist()
-        self.sim_fine = self.sim_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1))#.persist()
-        self.sim_fine_out = self.sim_fine.copy()
-
-        # Chunk grid area cell weights
-        fine_size = tuple((self.obs_fine.sizes['lat'], self.obs_fine.sizes['lon'], 1))
-        self.sum_weights = self.sum_weights.repeat(fine_size[1]).reshape(fine_size)
-        fine_chunk_size = tuple((fine_lat_chunk_size, fine_lon_chunk_size, 1))
-        chunk_sum_weights = da.from_array(self.sum_weights, chunks=fine_chunk_size)
-
-        # Downscale with dask map_blocks handling parallelization
-        # Set up dask computation
-        ba_output_data = da.map_blocks(downscale_chunk,
-                                       self.obs_fine[self.variable].data,
-                                       self.sim_coarse[self.variable].data,
-                                       self.sim_fine[self.variable].data,
-                                       chunk_sum_weights,
-                                       params=self.params,
-                                       month_numbers=self.month_numbers,
-                                       downscaling_factors=self.downscaling_factors,
-                                       rotation_matrices=self.rotation_matrices,
-                                       dtype=object, chunks=self.sim_fine[self.variable].chunks)
-
-        self.sim_fine_out[self.variable].data = ba_output_data
-
-        if file:
-            self.save_downscale_nc(file, encoding, monthly)
-
-        return self.sim_fine
-
-    def save_downscale_nc(self, file, encoding=None, monthly: bool=False):
-        """
-        Saves Downscaled data to NetCDF files at specific path
-
-        Parameters
-        ----------
-        file: str
-            Location to and name of file to save downscaled data
-        encoding: dict
-            Parameter for to_netcdf function
-        """
-        # Make sure we've computed
-        self.sim_fine_out = self.sim_fine_out.persist()
-
-        # If monthly, save monthly aggregation
-        if monthly:
-            # self.sim_fut_ba = self.sim_fut_ba.astype(float)
-            # temp = self.sim_fut_ba.resample(time='1MS').\
-            temp = self.sim_fine_out.astype(float).\
-                resample(time='1MS').\
-                mean(dim='time').\
-                chunk({'time': -1}).\
-                copy()
-            write_job = temp.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
-            with ProgressBar():
-                write_job.compute()
-            del temp
-        else:
-            # Try converting calendar back to input calendar
-            try:
-                self.sim_fine_out = self.sim_fine_out.convert_calendar(self.input_calendar, align_on='date')
-            except AttributeError:
-                AttributeError('Unable to convert calendar')
-
-            self.sim_fine_out.to_netcdf(file)#, encoding={self.variable: encoding})
-            # write_job = self.sim_fine_out.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
-            # with ProgressBar():
-            #     write_job.compute()
-
-
 def get_data_at_loc(loc,
                     obs_fine, sim_coarse, sim_fine,
                     month_numbers, downscaling_factors, sum_weights):
@@ -695,7 +457,7 @@ def grid_cell_weights(lats):
 
     return weight_by_lat
 
-def downscale(init_output,
+def downscale(init_output, clear_temp: bool = True,
               lat_chunk_size: int = 0, lon_chunk_size: int = 0,
               file: str = None, encoding = None, monthly: bool=False):
     """
@@ -733,8 +495,11 @@ def downscale(init_output,
 
     # Chunk data
     obs_fine = obs_fine.chunk(dict(lat=fine_lat_chunk_size, lon=fine_lon_chunk_size, time=-1))
+    progress(obs_fine) 
     sim_fine = sim_fine.chunk(dict(lat=fine_lat_chunk_size, lon=fine_lon_chunk_size, time=-1))
+    progress(sim_fine) 
     sim_coarse = sim_coarse.chunk(dict(lat=lat_chunk_size, lon=lon_chunk_size, time=-1))
+    progress(sim_coarse) 
     sim_fine_out = sim_fine.copy()
 
     # Chunk grid area cell weights
@@ -756,10 +521,19 @@ def downscale(init_output,
                                     rotation_matrices=init_output['rotation_matrices'],
                                     dtype=object, chunks=sim_fine[init_output['variable']].chunks)
 
+    # Put statistically downscaled data into the new Dataset
     sim_fine_out[init_output['variable']].data = ba_output_data
 
+    # If an output file is provided, write data to that file as .nc
     if file:
         save_downscale_nc(sim_fine_out, init_output['variable'], file, encoding, monthly)
+
+    # Clear the temporary directoy. Optional but happens by default
+    if clear_temp:
+        try:
+            os.rmdir(init_output['temp_path'])
+        except OSError as e:
+            print("Error: %s : %s" % (init_output['temp_path'], e.strerror))
 
     return sim_fine_out
 
@@ -796,3 +570,81 @@ def save_downscale_nc(sim_fine_out, variable, file, input_calendar, encoding=Non
         write_job = sim_fine_out.to_netcdf(file, compute=True)#, encoding={self.variable: encoding})
         # write_job = self.sim_fine_out.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
         progress(write_job)
+
+def downscale_one_location(init_output, i_loc: dict, clear_temp: bool = False):
+    """
+    Function to downscale a single coarse grid cell
+
+    Parameters
+    ----------
+    init_output: dict
+        output of the downscaling initialization
+    i_loc: dict
+        Dictionary of lat, lon index, for coarse cell
+    clear_temp: bool
+        Whether to clear intermediate results after downscaling at this location. Default is not to do this.
+
+    Returns
+    -------
+    sim_fine_loc: ndarray
+        3D array of downscaled coarse grid. Size is latitude scaling factor by longitude scaling
+        factor by time
+    """
+    # Extract intitialization details that we use multiple times
+    temp_path = init_output['temp_path']
+    variable = init_output['variable']
+    params = init_output['params']
+    month_numbers = init_output['month_numbers']
+    downscaling_factors = init_output['downscaling_factors']
+
+    # Open data
+    obs_fine = xr.open_zarr(os.path.join(temp_path, 'obs_fine_init.zarr'))
+    sim_fine = xr.open_zarr(os.path.join(temp_path, 'sim_fine_init.zarr'))
+    sim_coarse = xr.open_zarr(os.path.join(temp_path, 'sim_coarse_init.zarr'))
+
+    # Extract intitialization details that we use multiple times
+    variable = init_output['variable']
+    params = init_output['params']
+    month_numbers = init_output['month_numbers']
+    downscaling_factors = init_output['downscaling_factors']
+
+    # Order dimensions lon, lat, time
+    obs_fine[variable] = obs_fine[variable].transpose('lat', 'lon', 'time')
+    sim_fine[variable] = sim_fine[variable].transpose('lat', 'lon', 'time')
+    sim_coarse[variable] = sim_coarse[variable].transpose('lat', 'lon', 'time')
+
+    # Turn location dictionary into tuple (lat index, lon index)
+    loc_tuple = (i_loc['lat'], i_loc['lon'])
+
+    # Get data at location
+    data, sum_weights_loc = get_data_at_loc(loc_tuple,
+                                            obs_fine[variable].data,
+                                            sim_coarse[variable].data,
+                                            sim_fine[variable].data,
+                                            month_numbers, downscaling_factors, init_output['sum_weights'])
+
+    # abort here if there are only missing values in at least one time series
+    # do not abort though if the if_all_invalid_use option has been specified
+    if np.isnan(params.if_all_invalid_use):
+        if sdu.only_missing_values_in_at_least_one_time_series(data):
+            warnings.warn(f'{i_loc} skipped due to missing data')
+            return None
+
+    # compute mean value over all time steps for invalid value sampling
+    long_term_mean = {}
+    for key, d in data.items():
+        long_term_mean[key] = util.average_valid_values(d, params.if_all_invalid_use,
+                                                        params.lower_bound, params.lower_threshold,
+                                                        params.upper_bound, params.upper_threshold)
+
+    # Result in flattened format
+    result = downscale_month_by_month(data, sum_weights_loc,
+                                        long_term_mean, month_numbers,
+                                        init_output['rotation_matrices'], params)
+
+    # Reshape to grid
+    result = result.T.reshape((downscaling_factors['lat'],
+                                downscaling_factors['lon'],
+                                month_numbers['sim_fine'].size))
+
+    return result
