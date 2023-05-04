@@ -292,6 +292,7 @@ def generate_cre_matrix(n: int):
     d = np.diagonal(r)
     return q * (d / np.abs(d))
 
+
 def init_downscaling(obs_fine: xr.Dataset,
                      sim_coarse: xr.Dataset,
                      variable: str,
@@ -386,6 +387,7 @@ def init_downscaling(obs_fine: xr.Dataset,
         'years': years
         }
 
+
 def analyze_input_grids(obs_fine, sim_coarse):
     """
     Asserts that grids are of compatible sizes, and returns scaling factors,
@@ -440,6 +442,7 @@ def analyze_input_grids(obs_fine, sim_coarse):
 
     return scale_factors
 
+
 def grid_cell_weights(lats):
     """
     Function for finding the weight of each grid cell based on global grid area
@@ -457,6 +460,7 @@ def grid_cell_weights(lats):
     weight_by_lat = np.cos(np.deg2rad(lats))
 
     return weight_by_lat
+
 
 def downscale(init_output, clear_temp: bool = True,
               lat_chunk_size: int = 0, lon_chunk_size: int = 0,
@@ -538,6 +542,7 @@ def downscale(init_output, clear_temp: bool = True,
 
     return sim_fine_out
 
+
 def save_downscale_nc(sim_fine_out, variable, file, input_calendar, encoding=None, monthly: bool=False):
     """
     Saves Downscaled data to NetCDF files at specific path
@@ -571,6 +576,7 @@ def save_downscale_nc(sim_fine_out, variable, file, input_calendar, encoding=Non
         write_job = sim_fine_out.to_netcdf(file, compute=True)#, encoding={self.variable: encoding})
         # write_job = self.sim_fine_out.to_netcdf(file, encoding={self.variable: encoding}, compute=False)
         progress(write_job)
+
 
 def downscale_one_location(init_output, i_loc: dict, clear_temp: bool = False):
     """
