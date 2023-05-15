@@ -468,9 +468,9 @@ def grid_cell_weights(lats):
     return weight_by_lat
 
 
-def downscale(init_output, clear_temp: bool = True,
+def downscale(init_output, output_dir: str = None, clear_temp: bool = True,
               lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-              file: str = None, encoding = None, monthly: bool=False):
+              day_file: str = None, month_file: str = None, encoding = None):
     """
     Function to downscale climate data using MBCn_SD method
 
@@ -536,8 +536,8 @@ def downscale(init_output, clear_temp: bool = True,
     sim_fine_out[init_output['variable']].data = ba_output_data
 
     # If an output file is provided, write data to that file as .nc
-    if file:
-        save_downscale_nc(sim_fine_out, init_output['variable'], file, init_output['input_calendar'], encoding, monthly)
+    if day_file or month_file:
+        save_downscale_nc(sim_fine_out, init_output['variable'], init_output['input_calendar'], output_dir, day_file, month_file, encoding)
 
     # Clear the temporary directory. Optional but happens by default
     if clear_temp:
@@ -549,7 +549,7 @@ def downscale(init_output, clear_temp: bool = True,
     return sim_fine_out
 
 
-def save_downscale_nc(sim_fine_out, variable, file, input_calendar, encoding=None, monthly: bool=False):
+def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_file: str = None, month_file: str = None, encoding = None):
     """
     Saves Downscaled data to NetCDF files at specific path
 
@@ -563,24 +563,39 @@ def save_downscale_nc(sim_fine_out, variable, file, input_calendar, encoding=Non
     # Make sure we've computed
     sim_fine_out = sim_fine_out.persist()
 
+    # If not saving daily data in long term
+    day_flag = False
+    if not day_file:
+        day_flag = True
+        day_file = 'sim_fut_ba_day.nc'
+
+    # Try converting calendar back to input calendar
+    try:
+        sim_fine_out = sim_fine_out.convert_calendar(input_calendar, align_on='date')
+    except AttributeError:
+        AttributeError('Unable to convert calendar')
+
+    # Save daily data
+    write_job = sim_fine_out.to_netcdf(os.path.join(output_dir, day_file), encoding={variable: encoding}, compute=True)
+    progress(write_job)
+    sim_fine_out.close()
+
     # If monthly, save monthly aggregation
-    if monthly:
+    if month_file:
+        sim_fine_out = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'time': 50})
         temp = sim_fine_out.astype(float).\
             resample(time='1MS').\
             mean(dim='time').\
             chunk({'time': -1}).\
             copy()
-        write_job = temp.to_netcdf(file, encoding={variable: encoding}, compute=True)
+        write_job = temp.to_netcdf(os.path.join(output_dir, month_file), encoding={variable: encoding}, compute=True)
         progress(write_job)
-    else:
-        # Try converting calendar back to input calendar
-        try:
-            sim_fine_out = sim_fine_out.convert_calendar(input_calendar, align_on='date')
-        except AttributeError:
-            AttributeError('Unable to convert calendar')
-
-        write_job = sim_fine_out.to_netcdf(file, encoding={variable: encoding}, compute=True)
-        progress(write_job)
+        temp.close()
+        sim_fine_out.close()
+    
+    # Delete daily data if not wanted
+    if day_flag:
+        os.remove(os.path.join(output_dir, day_file))
 
 
 def downscale_one_location(init_output, i_loc: dict, clear_temp: bool = False):

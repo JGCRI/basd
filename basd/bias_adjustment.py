@@ -403,8 +403,9 @@ def assert_consistency_of_data_resolution(datasets):
     return obs_hist, sim_hist, sim_fut, datasets
 
 
-def adjust_bias(init_output, clear_temp: bool = True, lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                file: str = None, monthly: bool = False, encoding = None):
+def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True, 
+                lat_chunk_size: int = 0, lon_chunk_size: int = 0,
+                day_file: str = None, month_file: str = None, encoding = None):
     """
     Does bias adjustment at every location of input data
 
@@ -484,8 +485,8 @@ def adjust_bias(init_output, clear_temp: bool = True, lat_chunk_size: int = 0, l
 
     # If provided a path to save NetCDF file, save adjusted DataSet,
     # else just return the result
-    if file:
-        save_adjustment_nc(sim_fut_ba, file, init_output['input_calendar'], variable, monthly, encoding)
+    if day_file or month_file:
+        save_adjustment_nc(sim_fut_ba, init_output['input_calendar'], variable, output_dir, day_file, month_file, encoding)
 
     # Clear the temporary directory. Optional but happens by default
     if clear_temp:
@@ -497,7 +498,7 @@ def adjust_bias(init_output, clear_temp: bool = True, lat_chunk_size: int = 0, l
     return sim_fut_ba
 
 
-def save_adjustment_nc(sim_fut_ba, file, input_calendar, variable, monthly: bool = False, encoding=None):
+def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_file: str = None, month_file: str = None, encoding = None):
     """
     Saves adjusted data to NetCDF file at specific path
 
@@ -513,25 +514,41 @@ def save_adjustment_nc(sim_fut_ba, file, input_calendar, variable, monthly: bool
 
     # Make sure we've computed
     sim_fut_ba = sim_fut_ba.persist()
+    
+
+    # If not saving daily data in long term
+    day_flag = False
+    if not day_file:
+        day_flag = True
+        day_file = 'sim_fut_ba_day.nc'
+
+    # Try converting calendar back to input calendar
+    try:
+        sim_fut_ba = sim_fut_ba.convert_calendar(input_calendar, align_on='date')
+    except AttributeError:
+        AttributeError('Unable to convert calendar')
+
+    # Save daily data
+    write_job = sim_fut_ba.to_netcdf(os.path.join(output_dir, day_file), encoding={variable: encoding}, compute=True)
+    progress(write_job)
+    sim_fut_ba.close()
 
     # If monthly, save monthly aggregation
-    if monthly:
+    if month_file:
+        sim_fut_ba = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'time': 50})
         temp = sim_fut_ba.astype(float).\
             resample(time='1MS').\
             mean(dim='time').\
             chunk({'time': -1}).\
             copy()
-        write_job = temp.to_netcdf(file, encoding={variable: encoding}, compute=True)
+        write_job = temp.to_netcdf(os.path.join(output_dir, month_file), encoding={variable: encoding}, compute=True)
         progress(write_job)
-    else:
-        # Try converting calendar back to input calendar
-        try:
-            sim_fut_ba = sim_fut_ba.convert_calendar(input_calendar, align_on='date')
-        except AttributeError:
-            AttributeError('Unable to convert calendar')
-
-        write_job = sim_fut_ba.to_netcdf(file, encoding={variable: encoding}, compute=True)
-        progress(write_job)
+        temp.close()
+        sim_fut_ba.close()
+    
+    # Delete daily data if not wanted
+    if day_flag:
+        os.remove(os.path.join(output_dir, day_file))
 
 
 def adjust_bias_one_location(init_output, i_loc, clear_temp: bool = False, full_details: bool = True):
