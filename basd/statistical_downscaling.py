@@ -578,7 +578,7 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
         AttributeError('Unable to convert calendar')
 
     # Save daily data
-    write_job = sim_fine_out.to_netcdf(os.path.join(output_dir, day_file), compute=True)#, encoding={variable: encoding})
+    write_job = sim_fine_out.to_netcdf(os.path.join(output_dir, day_file), encoding=encoding, compute=True)
     progress(write_job)
     sim_fine_out.close()
 
@@ -625,7 +625,7 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
         output = xr.map_blocks(my_agg_func, sim_fine_out, template=template)
 
         # Write out
-        write_job = output.to_netcdf(os.path.join(output_dir, month_file), compute=True)
+        write_job = output.to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
         progress(write_job)
 
         # Close

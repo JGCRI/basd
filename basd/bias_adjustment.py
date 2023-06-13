@@ -529,7 +529,7 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
         AttributeError('Unable to convert calendar')
 
     # Save daily data
-    write_job = sim_fut_ba.to_netcdf(os.path.join(output_dir, day_file), encoding={variable: encoding}, compute=True)
+    write_job = sim_fut_ba.to_netcdf(os.path.join(output_dir, day_file), encoding=encoding, compute=True)
     progress(write_job)
     sim_fut_ba.close()
 
@@ -576,7 +576,7 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
         output = xr.map_blocks(my_agg_func, sim_fut_ba, template=template)
 
         # Write out
-        write_job = output.to_netcdf(os.path.join(output_dir, month_file), compute=True)
+        write_job = output.to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
         progress(write_job)
 
         # Close
