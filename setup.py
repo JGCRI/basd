@@ -22,7 +22,7 @@ setup(
     description='',
     long_description=readme(),
     long_description_content_type="text/markdown",
-    python_requires='>=3.6.*, <4',
+    #python_requires='>=3.6.*, <4',
     include_package_data=True,
     install_requires=[
         "dask",

@@ -1,0 +1,27 @@
+name: basd-env
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.9
+  - pip
+  - setuptools
+  - pytest
+  - pytest-cov
+  - dask[complete]
+  - esmpy
+  - joblib
+  - matplotlib
+  - netCDF4
+  - numpy
+  - pandas
+  - plotly
+  - PyYAML
+  - rasterio
+  - rioxarray
+  - scipy
+  - seaborn
+  - xarray
+  - xesmf
