@@ -2,6 +2,7 @@ import os
 import shutil
 import warnings
 
+from datetime import datetime
 import dask.array as da
 from dask.distributed import progress
 import numpy as np
@@ -567,7 +568,8 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
     day_flag = False
     if not day_file:
         day_flag = True
-        day_file = 'sim_fut_ba_day.nc'
+        date_str = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+        day_file = f'{variable}_sim_fut_ba_day_{date_str}.nc'
 
     # Try converting calendar back to input calendar
     try:
@@ -576,21 +578,58 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
         AttributeError('Unable to convert calendar')
 
     # Save daily data
-    write_job = sim_fine_out.to_netcdf(os.path.join(output_dir, day_file), encoding={variable: encoding}, compute=True)
+    write_job = sim_fine_out.to_netcdf(os.path.join(output_dir, day_file), compute=True)#, encoding={variable: encoding})
     progress(write_job)
     sim_fine_out.close()
 
     # If monthly, save monthly aggregation
     if month_file:
-        sim_fine_out = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'time': 50})
-        temp = sim_fine_out.astype(float).\
-            resample(time='1MS').\
-            mean(dim='time').\
-            chunk({'time': -1}).\
-            copy()
-        write_job = temp.to_netcdf(os.path.join(output_dir, month_file), encoding={variable: encoding}, compute=True)
+        # Aggregation function for each chunk
+        def my_agg_func(x):
+            return x.resample(time='1MS').mean(dim='time').transpose('lon', 'lat', 'time')
+
+        # Read in Data
+        sim_fine_out = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'lat': 10, 'lon': 10, 'time': -1})
+
+        # Get details for template
+        # What the time coords will be after aggregation
+        months = np.unique(sim_fine_out.time.dt.month)
+        years = np.unique(sim_fine_out.time.dt.year)
+        unique = []
+        for y in years: 
+            for m in months:
+                unique.append((y,m)) 
+        times = [datetime.strptime(f'{y}-{m}-01', '%Y-%m-%d') for (y, m) in unique]
+
+        # Dimensionality
+        lat_dim = len(sim_fine_out[variable].lat)
+        lon_dim = len(sim_fine_out[variable].lon)
+        time_dim = len(times)
+
+        # Temp array of matching size
+        zeros = np.zeros((lon_dim, lat_dim, time_dim))
+
+        # Template of the output for map blocks
+        template = xr.Dataset(
+            data_vars = {
+                variable: (['lon', 'lat', 'time'], zeros)
+            },
+            coords = {
+                'lat': sim_fine_out[variable].lat,
+                'lon': sim_fine_out[variable].lon,
+                'time': times
+            }
+        ).chunk({'lon': 10, 'lat': 10, 'time': -1})
+
+        # Map blocks
+        output = xr.map_blocks(my_agg_func, sim_fine_out, template=template)
+
+        # Write out
+        write_job = output.to_netcdf(os.path.join(output_dir, month_file), compute=True)
         progress(write_job)
-        temp.close()
+
+        # Close
+        output.close()
         sim_fine_out.close()
     
     # Delete daily data if not wanted

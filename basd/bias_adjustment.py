@@ -535,15 +535,52 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
 
     # If monthly, save monthly aggregation
     if month_file:
-        sim_fut_ba = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'time': 50})
-        temp = sim_fut_ba.astype(float).\
-            resample(time='1MS').\
-            mean(dim='time').\
-            chunk({'time': -1}).\
-            copy()
-        write_job = temp.to_netcdf(os.path.join(output_dir, month_file), encoding={variable: encoding}, compute=True)
+        # Aggregation function for each chunk
+        def my_agg_func(x):
+            return x.resample(time='1MS').mean(dim='time').transpose('lon', 'lat', 'time')
+
+        # Read in Data
+        sim_fut_ba = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'lat': 10, 'lon': 10, 'time': -1})
+
+        # Get details for template
+        # What the time coords will be after aggregation
+        months = np.unique(sim_fut_ba.time.dt.month)
+        years = np.unique(sim_fut_ba.time.dt.year)
+        unique = []
+        for y in years: 
+            for m in months:
+                unique.append((y,m)) 
+        times = [dt.datetime.strptime(f'{y}-{m}-01', '%Y-%m-%d') for (y, m) in unique]
+
+        # Dimensionality
+        lat_dim = len(sim_fut_ba[variable].lat)
+        lon_dim = len(sim_fut_ba[variable].lon)
+        time_dim = len(times)
+
+        # Temp array of matching size
+        zeros = np.zeros((lon_dim, lat_dim, time_dim))
+
+        # Template of the output for map blocks
+        template = xr.Dataset(
+            data_vars = {
+                variable: (['lon', 'lat', 'time'], zeros)
+            },
+            coords = {
+                'lat': sim_fut_ba[variable].lat,
+                'lon': sim_fut_ba[variable].lon,
+                'time': times
+            }
+        ).chunk({'lon': 10, 'lat': 10, 'time': -1})
+
+        # Map blocks
+        output = xr.map_blocks(my_agg_func, sim_fut_ba, template=template)
+
+        # Write out
+        write_job = output.to_netcdf(os.path.join(output_dir, month_file), compute=True)
         progress(write_job)
-        temp.close()
+
+        # Close
+        output.close()
         sim_fut_ba.close()
     
     # Delete daily data if not wanted
