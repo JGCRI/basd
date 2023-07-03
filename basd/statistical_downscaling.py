@@ -297,8 +297,9 @@ def init_downscaling(obs_fine: xr.Dataset,
                      sim_coarse: xr.Dataset,
                      variable: str,
                      params: Parameters,
+                     lat_chunk_size: int = 5,
+                     lon_chunk_size: int = 5,
                      temp_path: str = 'basd_temp_path',
-                     time_chunk: int = 100,
                      periodic: bool = True):
     """
     Parameters
@@ -311,10 +312,13 @@ def init_downscaling(obs_fine: xr.Dataset,
         Name of the variable of interest
     params: Parameters
         Object that specifies the parameters for the variable's SD routine
+    lat_chunk_size: int
+        Size of Dask chunks in latitude dimension to perform downscaling.
+        If getting errors or warnings for memory, go for smaller chunks. 5x5 is an already pretty small default.
+    lon_chunk_size: int
+        Size of Dask chunks in longitude dimension to perform downscaling.
     temp_path: str
         path to directory where intermediate files are stored
-    time_chunk: int
-        size of chunks in time dimension before writing to zarr. Should be large for speed, but just small enough to fit into memory if that's an issue. Otherwise not important.
     periodic: bool
         Whether grid wraps around globe longitudinally. Used during regridding interpolation.
 
@@ -365,14 +369,19 @@ def init_downscaling(obs_fine: xr.Dataset,
     rotation_matrices = [generate_cre_matrix(downscaling_factors['lat'] * downscaling_factors['lon'])
                             for _ in range(params.n_iterations)]
 
-    # Save intermediate arrays
-    obs_fine_write = obs_fine.chunk(dict(lon=obs_fine.dims['lon'], lat=obs_fine.dims['lat'], time=time_chunk)).\
+
+    # Get chunk sizes for fine data inside coarse chunks
+    fine_lon_chunk_size = lon_chunk_size * downscaling_factors['lon']
+    fine_lat_chunk_size = lat_chunk_size * downscaling_factors['lat']
+
+    # Save intermediate arrays with chunking ready to go for downscaling
+    obs_fine_write = obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1)).\
         to_zarr(os.path.join(temp_path, 'obs_fine_init.zarr'), mode='w')
     progress(obs_fine_write)
-    sim_fine_write = sim_fine.chunk(dict(lon=sim_fine.dims['lon'], lat=sim_fine.dims['lat'], time=time_chunk)).\
+    sim_fine_write = sim_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1)).\
         to_zarr(os.path.join(temp_path, 'sim_fine_init.zarr'), mode='w')
     progress(sim_fine_write)
-    sim_coarse_write = sim_coarse.chunk(dict(lon=sim_coarse.dims['lon'], lat=sim_coarse.dims['lat'], time=time_chunk)).\
+    sim_coarse_write = sim_coarse.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1)).\
         to_zarr(os.path.join(temp_path, 'sim_coarse_init.zarr'), mode='w')
     progress(sim_coarse_write)
 
@@ -385,6 +394,8 @@ def init_downscaling(obs_fine: xr.Dataset,
         'temp_path': temp_path,
         'variable': variable,
         'params': params,
+        'lat_chunk_size': lat_chunk_size,
+        'lon_chunk_size': lon_chunk_size,
         'downscaling_factors': downscaling_factors,
         'input_calendar': input_calendar, 
         'sum_weights': sum_weights, 
@@ -470,8 +481,8 @@ def grid_cell_weights(lats):
 
 
 def downscale(init_output, output_dir: str = None, clear_temp: bool = True,
-              lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-              day_file: str = None, month_file: str = None, encoding = None):
+              day_file: str = None, month_file: str = None, encoding = None,
+              basd_attrs: dict = None, basd_attrs_mon: dict = None, variable_attrs: dict = None):
     """
     Function to downscale climate data using MBCn_SD method
 
@@ -479,12 +490,20 @@ def downscale(init_output, output_dir: str = None, clear_temp: bool = True,
     ----------
     file: str
         Location and name string to save output file
-    lat_chunk_size: int
-        Number of cells to include in chunk in lat direction
-    lon_chunk_size: int
-        Number of cells to include in chunk in lon direction
+    clear_temp: bool
+        Whether or not to clean/remove intermediate files/directory
+    day_file: str
+        Name of the daily output data file. None if not keeping daily data.
+    month_file: str
+        Name of the monthly output data file. None if not keeping monthly data.
     encoding: dict
         Parameter for save as netcdf function
+    basd_attrs: dict
+        Dictionary of global attributes to write to output daily NetCDF
+    basd_attrs_mon: dict
+        Dictionary of global attributes to write to output monthly NetCDF
+    variable_attrs: dict
+        Dictionary of variable attributes to write to output NetCDF
 
     Returns
     -------
@@ -492,6 +511,8 @@ def downscale(init_output, output_dir: str = None, clear_temp: bool = True,
         Downscaled data. Same spatial resolution as input obs_fine
     """
     # Get corresponding chunks for coarse data
+    lat_chunk_size = init_output['lat_chunk_size']
+    lon_chunk_size = init_output['lon_chunk_size']
     fine_lon_chunk_size = lon_chunk_size * init_output['downscaling_factors']['lon']
     fine_lat_chunk_size = lat_chunk_size * init_output['downscaling_factors']['lat']
 
@@ -505,13 +526,7 @@ def downscale(init_output, output_dir: str = None, clear_temp: bool = True,
     sim_fine[init_output['variable']] = sim_fine[init_output['variable']].transpose('lat', 'lon', 'time')
     sim_coarse[init_output['variable']] = sim_coarse[init_output['variable']].transpose('lat', 'lon', 'time')
 
-    # Chunk data
-    obs_fine = obs_fine.chunk(dict(lat=fine_lat_chunk_size, lon=fine_lon_chunk_size, time=-1))
-    progress(obs_fine) 
-    sim_fine = sim_fine.chunk(dict(lat=fine_lat_chunk_size, lon=fine_lon_chunk_size, time=-1))
-    progress(sim_fine) 
-    sim_coarse = sim_coarse.chunk(dict(lat=lat_chunk_size, lon=lon_chunk_size, time=-1))
-    progress(sim_coarse) 
+    # Template output dataset to populate
     sim_fine_out = sim_fine.copy()
 
     # Chunk grid area cell weights
@@ -538,7 +553,7 @@ def downscale(init_output, output_dir: str = None, clear_temp: bool = True,
 
     # If an output file is provided, write data to that file as .nc
     if day_file or month_file:
-        save_downscale_nc(sim_fine_out, init_output['variable'], init_output['input_calendar'], output_dir, day_file, month_file, encoding)
+        save_downscale_nc(sim_fine_out, init_output['variable'], init_output['input_calendar'], output_dir, day_file, month_file, encoding, basd_attrs, basd_attrs_mon, variable_attrs)
 
     # Clear the temporary directory. Optional but happens by default
     if clear_temp:
@@ -550,7 +565,7 @@ def downscale(init_output, output_dir: str = None, clear_temp: bool = True,
     return sim_fine_out
 
 
-def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_file: str = None, month_file: str = None, encoding = None):
+def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_file: str = None, month_file: str = None, encoding = None, basd_attrs: dict = None, basd_attrs_mon: dict = None, variable_attrs: dict = None):
     """
     Saves Downscaled data to NetCDF files at specific path
 
@@ -561,8 +576,15 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
     encoding: dict
         Parameter for to_netcdf function
     """
+
+    # If attributes supplied, replace them
+    if basd_attrs is not None:
+        sim_fine_out.attrs = basd_attrs    
+    if variable_attrs is not None:
+        sim_fine_out[variable].attrs = variable_attrs
+
     # Make sure we've computed
-    sim_fine_out = sim_fine_out.persist()
+    sim_fine_out = sim_fine_out.compute()
 
     # If not saving daily data in long term
     day_flag = False
@@ -578,8 +600,7 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
         AttributeError('Unable to convert calendar')
 
     # Save daily data
-    write_job = sim_fine_out.to_netcdf(os.path.join(output_dir, day_file), encoding=encoding, compute=True)
-    progress(write_job)
+    sim_fine_out[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, day_file), encoding=encoding)
     sim_fine_out.close()
 
     # If monthly, save monthly aggregation
@@ -592,7 +613,7 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
         sim_fine_out = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'lat': 10, 'lon': 10, 'time': -1})
 
         # Get details for template
-        # What the time coords will be after aggregation
+        # This is what the time coords will be after aggregation
         months = np.unique(sim_fine_out.time.dt.month)
         years = np.unique(sim_fine_out.time.dt.year)
         unique = []
@@ -624,8 +645,14 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
         # Map blocks
         output = xr.map_blocks(my_agg_func, sim_fine_out, template=template)
 
+        # If attributes supplied, set them
+        if basd_attrs_mon is not None:
+            output.attrs = basd_attrs_mon    
+        if variable_attrs is not None:
+            output[variable].attrs = variable_attrs
+
         # Write out
-        write_job = output.to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
+        write_job = output[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
         progress(write_job)
 
         # Close
