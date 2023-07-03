@@ -118,37 +118,29 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
         return sim_coarse
 
     # Else, get the nearest integer factor that divides the grid evenly
+    # TODO: Broken for grids that are already less than 1 degree. Currently always downscales,
+    #       which currently leads to coarse grid being same as fine grid
     lat_facts = factors(len(fine_lats))
     lon_facts = factors(len(fine_lons))
-    f_lat = [x for x in lat_facts if x < f_lat][-1]
-    f_lon = [x for x in lon_facts if x < f_lon][-1]
+    # If we are thinking about downscaling to the observational dataset, don't. Instead, upscale.
+    if(f_lat > 1 and f_lat < 2):
+        f_lat = np.sort([x for x in lat_facts if x > 1])[0]
+    # Generally though, tend to downscale
+    else:
+        f_lat = np.sort([x for x in lat_facts if x <= f_lat])[-1]
+    # Same as above, but for longitudinal scaling
+    if(f_lon > 1 and f_lon < 2):
+        f_lon = np.sort([x for x in lon_facts if x > 1])[0]
+    else:
+        f_lon = np.sort([x for x in lon_facts if x <= f_lon])[-1]
 
-    # Find bounds
-    fine_lat_delta = float(obs_fine.lat[1] - obs_fine.lat[0])
-    fine_lon_delta = float(obs_fine.lon[1] - obs_fine.lon[0])
-    lat_b1 = float(obs_fine.lat[0]) - fine_lat_delta / 2
-    lat_b2 = float(obs_fine.lat[-1]) + fine_lat_delta / 2
-    lon_b1 = float(obs_fine.lon[0]) - fine_lon_delta / 2
-    lon_b2 = float(obs_fine.lon[-1]) + fine_lon_delta / 2
-    coarse_lat_delta = f_lat * fine_lat_delta
-    coarse_lon_delta = f_lon * fine_lon_delta
-    new_lats = np.arange(lat_b1 + coarse_lat_delta / 2,
-                         lat_b2 - coarse_lat_delta / 2 + f_lat * fine_lat_delta / 2,
-                         f_lat * fine_lat_delta)
-    new_lons = np.arange(lon_b1 + coarse_lon_delta / 2,
-                         lon_b2 - coarse_lon_delta / 2 + f_lon * fine_lon_delta / 2,
-                         f_lon * fine_lon_delta)
-
-    new_grid = xr.Dataset(coords = {'lat': new_lats, 'lon': new_lons})
-
-    # Create new sequence of coordinates for xesmf regridder
-    #new_grid = xesmf.util.grid_2d(lon_b1, lon_b2, f_lon * fine_lon_delta,
-    #                              lat_b1, lat_b2, f_lat * fine_lat_delta)
+    # TODO: Replace below template grid finding with simpler coarsen method
+    template = obs_fine.copy()
+    template = template.coarsen(lat=f_lat, lon=f_lon).sum()
 
     # Do the regridding and save as new coarse dataset
-    coarse_to_finer_regridder = xesmf.Regridder(sim_coarse, new_grid, 'bilinear', periodic=periodic)
+    coarse_to_finer_regridder = xesmf.Regridder(sim_coarse, template, 'bilinear', periodic=periodic)
     sim_coarse_arr = coarse_to_finer_regridder(sim_coarse[variable])
-    # sim_coarse = xr.Dataset({variable: sim_coarse_arr})
     sim_coarse = sim_coarse_arr.to_dataset(name=variable)
 
     return sim_coarse
