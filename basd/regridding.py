@@ -134,9 +134,9 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
     else:
         f_lon = np.sort([x for x in lon_facts if x <= f_lon])[-1]
 
-    # TODO: Replace below template grid finding with simpler coarsen method
-    template = obs_fine.copy()
-    template = template.coarsen(lat=f_lat, lon=f_lon).sum()
+    # Get template dataset with the right lat/lon series by coarsening fine dataset by the found factors
+    # template = obs_fine.copy()
+    template = xr.Dataset(coords={'lat': fine_lats, 'lon': fine_lons}).coarsen(lat=2, lon=2).sum()
 
     # Do the regridding and save as new coarse dataset
     coarse_to_finer_regridder = xesmf.Regridder(sim_coarse, template, 'bilinear', periodic=periodic)

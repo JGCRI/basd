@@ -375,19 +375,26 @@ def init_downscaling(obs_fine: xr.Dataset,
     fine_lat_chunk_size = lat_chunk_size * downscaling_factors['lat']
 
     # Save intermediate arrays with chunking ready to go for downscaling
-    obs_fine_write = obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1)).\
-        to_zarr(os.path.join(temp_path, 'obs_fine_init.zarr'), mode='w')
-    progress(obs_fine_write)
+    sim_fine.compute()
     sim_fine_write = sim_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1)).\
         to_zarr(os.path.join(temp_path, 'sim_fine_init.zarr'), mode='w')
     progress(sim_fine_write)
+    sim_fine.close()
+    
+    sim_coarse.compute()
     sim_coarse_write = sim_coarse.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1)).\
         to_zarr(os.path.join(temp_path, 'sim_coarse_init.zarr'), mode='w')
     progress(sim_coarse_write)
-
-    obs_fine.close()
-    sim_fine.close()
     sim_coarse.close()
+    
+    obs_fine.compute()
+    obs_fine_write = obs_fine.chunk(dict(lon=fine_lon_chunk_size, lat=fine_lat_chunk_size, time=-1)).\
+        to_zarr(os.path.join(temp_path, 'obs_fine_init.zarr'), mode='w')
+    progress(obs_fine_write)
+    obs_fine.close()
+
+    # sim_fine.close()
+    # sim_coarse.close()
 
     # Return info that needs to be tracked
     return {
