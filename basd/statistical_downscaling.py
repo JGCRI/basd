@@ -591,6 +591,7 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
         sim_fine_out[variable].attrs = variable_attrs
 
     # Make sure we've computed
+    # sim_fine_out = sim_fine_out.transpose('time', 'lat', 'lon')
     sim_fine_out = sim_fine_out.compute()
 
     # If not saving daily data in long term
@@ -651,6 +652,7 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
 
         # Map blocks
         output = xr.map_blocks(my_agg_func, sim_fine_out, template=template)
+        # output = output.transpose('time', 'lat', 'lon')
 
         # If attributes supplied, set them
         if basd_attrs_mon is not None:

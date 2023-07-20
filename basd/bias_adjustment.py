@@ -500,6 +500,7 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
         sim_fut_ba[variable].attrs = variable_attrs
 
     # Make sure we've computed
+    # sim_fut_ba = sim_fut_ba.transpose('time', 'lat', 'lon')
     sim_fut_ba = sim_fut_ba.compute()    
 
     # If not saving daily data in long term
@@ -560,6 +561,8 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
 
         # Map blocks
         output = xr.map_blocks(my_agg_func, sim_fut_ba, template=template)
+        # output = output.transpose('time', 'lat', 'lon')
+        output = output.compute()
 
         # If attributes supplied, set them
         if ba_attrs_mon is not None:
