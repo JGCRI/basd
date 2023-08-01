@@ -520,62 +520,25 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
     sim_fut_ba.close()
 
     # If monthly, save monthly aggregation
-    # TODO: Move this functionality to seperate helper function for easy of reading.
     if month_file:
-        # Aggregation function for each chunk
-        def my_agg_func(x):
-            return x.resample(time='1MS').mean(dim='time').transpose('lon', 'lat', 'time')
 
         # Read in Data
-        sim_fut_ba = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'lat': 10, 'lon': 10, 'time': -1})
+        sim_fut_ba = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'time': 365})
 
-        # Get details for template
-        # What the time coords will be after aggregation
-        months = np.unique(sim_fut_ba.time.dt.month)
-        years = np.unique(sim_fut_ba.time.dt.year)
-        unique = []
-        for y in years: 
-            for m in months:
-                unique.append((y,m)) 
-        times = [dt.datetime.strptime(f'{y}-{m}-01', '%Y-%m-%d') for (y, m) in unique]
-
-        # Dimensionality
-        lat_dim = len(sim_fut_ba[variable].lat)
-        lon_dim = len(sim_fut_ba[variable].lon)
-        time_dim = len(times)
-
-        # Temp array of matching size
-        zeros = np.zeros((lon_dim, lat_dim, time_dim))
-
-        # Template of the output for map blocks
-        template = xr.Dataset(
-            data_vars = {
-                variable: (['lon', 'lat', 'time'], zeros)
-            },
-            coords = {
-                'lat': sim_fut_ba[variable].lat,
-                'lon': sim_fut_ba[variable].lon,
-                'time': times
-            }
-        ).chunk({'lon': 10, 'lat': 10, 'time': -1})
-
-        # Map blocks
-        output = xr.map_blocks(my_agg_func, sim_fut_ba, template=template)
-        # output = output.transpose('time', 'lat', 'lon')
-        output = output.compute()
+        # Compute Monthly Means
+        sim_fut_ba = sim_fut_ba.resample(time='M').mean('time').compute()
 
         # If attributes supplied, set them
         if ba_attrs_mon is not None:
-            output.attrs = ba_attrs_mon    
+            sim_fut_ba.attrs = ba_attrs_mon    
         if variable_attrs is not None:
-            output[variable].attrs = variable_attrs
+            sim_fut_ba[variable].attrs = variable_attrs
 
         # Write out
-        write_job = output[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
+        write_job = sim_fut_ba[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
         progress(write_job)
 
         # Close
-        output.close()
         sim_fut_ba.close()
     
     # Delete daily data if not wanted

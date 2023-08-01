@@ -613,59 +613,24 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
 
     # If monthly, save monthly aggregation
     if month_file:
-        # Aggregation function for each chunk
-        def my_agg_func(x):
-            return x.resample(time='1MS').mean(dim='time').transpose('lon', 'lat', 'time')
 
         # Read in Data
-        sim_fine_out = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'lat': 10, 'lon': 10, 'time': -1})
+        sim_fine_out = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'time': 365})
 
-        # Get details for template
-        # This is what the time coords will be after aggregation
-        months = np.unique(sim_fine_out.time.dt.month)
-        years = np.unique(sim_fine_out.time.dt.year)
-        unique = []
-        for y in years: 
-            for m in months:
-                unique.append((y,m)) 
-        times = [datetime.strptime(f'{y}-{m}-01', '%Y-%m-%d') for (y, m) in unique]
-
-        # Dimensionality
-        lat_dim = len(sim_fine_out[variable].lat)
-        lon_dim = len(sim_fine_out[variable].lon)
-        time_dim = len(times)
-
-        # Temp array of matching size
-        zeros = np.zeros((lon_dim, lat_dim, time_dim))
-
-        # Template of the output for map blocks
-        template = xr.Dataset(
-            data_vars = {
-                variable: (['lon', 'lat', 'time'], zeros)
-            },
-            coords = {
-                'lat': sim_fine_out[variable].lat,
-                'lon': sim_fine_out[variable].lon,
-                'time': times
-            }
-        ).chunk({'lon': 10, 'lat': 10, 'time': -1})
-
-        # Map blocks
-        output = xr.map_blocks(my_agg_func, sim_fine_out, template=template)
-        # output = output.transpose('time', 'lat', 'lon')
+        # Compute Monthly Means
+        sim_fine_out = sim_fine_out.resample(time='M').mean('time').compute()
 
         # If attributes supplied, set them
         if basd_attrs_mon is not None:
-            output.attrs = basd_attrs_mon    
+            sim_fine_out.attrs = basd_attrs_mon    
         if variable_attrs is not None:
-            output[variable].attrs = variable_attrs
+            sim_fine_out[variable].attrs = variable_attrs
 
         # Write out
-        write_job = output[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
+        write_job = sim_fine_out[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
         progress(write_job)
 
         # Close
-        output.close()
         sim_fine_out.close()
     
     # Delete daily data if not wanted
