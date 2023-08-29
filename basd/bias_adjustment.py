@@ -216,9 +216,9 @@ def init_bias_adjustment(obs_hist: xr.Dataset,
                          sim_fut: xr.Dataset,
                          variable: str,
                          params: Parameters,
-                         remap_grid: bool = False,
+                         lat_chunk_size: int = 5,
+                         lon_chunk_size: int = 5,
                          temp_path: str = 'basd_temp_path',
-                         time_chunk: int = 100,
                          periodic: bool = True):
     """
     Parameters
@@ -233,10 +233,13 @@ def init_bias_adjustment(obs_hist: xr.Dataset,
         Name of the variable of interest
     params: Parameters
         Object that specifies the parameters for the variable's SD routine
+    lat_chunk_size: int
+        Size of Dask chunks in latitude dimension to perform bias adjustment.
+        If getting errors or warnings for memory, go for smaller chunks. 5x5 is an already pretty small default.
+    lon_chunk_size: int
+        Size of Dask chunks in longitude dimension to perform bias adjustment
     temp_path: str
         path to directory where intermediate files are stored
-    time_chunk: int
-        size of chunks in time dimension before writing to zarr. Should be large for speed, but just small enough to fit into memory if that's an issue. Otherwise not important.
     periodic: bool
         Whether grid wraps around globe longitudinally. Used during regridding interpolation.
 
@@ -247,11 +250,11 @@ def init_bias_adjustment(obs_hist: xr.Dataset,
     """
     # Setting the data
     # Also converting calendar to proleptic_gregorian.
-    # See xarray.convert_calendar() fro details, but default uses date alignment
+    # See xarray.convert_calendar() for details, but default uses date alignment
     # for 360_day calendars, as this preserves month data for month-to-month mode
-    obs_hist = obs_hist.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
-    sim_hist = sim_hist.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
-    sim_fut = sim_fut.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan)
+    obs_hist = obs_hist.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan, use_cftime=False)
+    sim_hist = sim_hist.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan, use_cftime=False)
+    sim_fut = sim_fut.convert_calendar('proleptic_gregorian', align_on='date', missing=np.nan, use_cftime=False)
     
     # Saving input calendar type to convert back at end
     input_calendar = sim_hist.time.dt.calendar
@@ -270,9 +273,8 @@ def init_bias_adjustment(obs_hist: xr.Dataset,
     sim_fut = datasets['sim_fut']
 
     # Maps observational data onto simulated data grid resolution
-    if remap_grid:
-        obs_hist = rg.project_onto(obs_hist, sim_hist, variable, periodic)
-        datasets['obs_hist'] = obs_hist
+    obs_hist = rg.project_onto(obs_hist, sim_hist, variable, periodic)
+    datasets['obs_hist'] = obs_hist
 
     # Forces data to have same spatial shape and resolution
     obs_hist, sim_hist, sim_fut, datasets = assert_consistency_of_data_resolution(datasets)
@@ -284,13 +286,13 @@ def init_bias_adjustment(obs_hist: xr.Dataset,
     days, month_numbers, years = util.time_scraping(datasets)
 
     # Save intermediate arrays
-    obs_hist_write = obs_hist.chunk(dict(lon=obs_hist.dims['lon'], lat=obs_hist.dims['lat'], time=time_chunk)).\
+    obs_hist_write = obs_hist.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1)).\
         to_zarr(os.path.join(temp_path, 'obs_hist_init.zarr'), mode='w')
     progress(obs_hist_write)
-    sim_hist_write = sim_hist.chunk(dict(lon=sim_hist.dims['lon'], lat=sim_hist.dims['lat'], time=time_chunk)).\
+    sim_hist_write = sim_hist.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1)).\
         to_zarr(os.path.join(temp_path, 'sim_hist_init.zarr'), mode='w')
     progress(sim_hist_write)
-    sim_fut_write = sim_fut.chunk(dict(lon=sim_fut.dims['lon'], lat=sim_fut.dims['lat'], time=time_chunk)).\
+    sim_fut_write = sim_fut.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1)).\
         to_zarr(os.path.join(temp_path, 'sim_fut_init.zarr'), mode='w')
     progress(sim_fut_write)
 
@@ -404,8 +406,8 @@ def assert_consistency_of_data_resolution(datasets):
 
 
 def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True, 
-                lat_chunk_size: int = 0, lon_chunk_size: int = 0,
-                day_file: str = None, month_file: str = None, encoding = None):
+                day_file: str = None, month_file: str = None, encoding = None, 
+                ba_attrs: dict = None, ba_attrs_mon: dict = None, variable_attrs: dict = None):
     """
     Does bias adjustment at every location of input data
 
@@ -415,10 +417,6 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
         Dictionary of details relevant to Bias Adjustment, created during initialization
     clear_temp: bool
         Whether or not to clear temporary directory when done. Cleared by default.
-    lat_chunk_size: int
-        Number of cells to include in chunk in lat direction
-    lon_chunk_size: int
-        Number of cells to include in chunk in lon direction
     file: str
         Where to save the output as .nc file. (Optional, can just return output without saving)
     encoding: dict
@@ -441,6 +439,7 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
     years = init_output['years']
 
     # Read in data
+    # TODO: Read in the .zarr (or maybe save originally) as the chunk sizes we'll be using for BA, after the re-gridding step in initialization
     obs_hist = xr.open_zarr(os.path.join(temp_path, 'obs_hist_init.zarr'))
     sim_hist = xr.open_zarr(os.path.join(temp_path, 'sim_hist_init.zarr'))
     sim_fut = xr.open_zarr(os.path.join(temp_path, 'sim_fut_init.zarr'))
@@ -449,24 +448,6 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
     obs_hist[variable] = obs_hist[variable].transpose('lon', 'lat', 'time')
     sim_hist[variable] = sim_hist[variable].transpose('lon', 'lat', 'time')
     sim_fut[variable] = sim_fut[variable].transpose('lon', 'lat', 'time')
-
-    # Chunk data
-    if lat_chunk_size & lon_chunk_size:
-        # Manual chunk method
-        obs_hist = obs_hist.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1))
-        sim_hist = sim_hist.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1))
-        sim_fut = sim_fut.chunk(dict(lon=lon_chunk_size, lat=lat_chunk_size, time=-1))
-
-    else:
-        # Auto chunk method (not allowing to be chunked over time)
-        obs_hist = obs_hist.chunk(dict(lon=None, lat=None, time=-1))
-        sim_hist = sim_hist.chunk(dict(lon=None, lat=None, time=-1))
-        sim_fut = sim_fut.chunk(dict(lon=None, lat=None, time=-1))
-
-    # Force wait till this step is done before continuing
-    progress(obs_hist)
-    progress(sim_hist)
-    progress(sim_fut)
 
     # Make temp copy of correct shape for final data
     sim_fut_ba = sim_fut.copy()
@@ -486,7 +467,7 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
     # If provided a path to save NetCDF file, save adjusted DataSet,
     # else just return the result
     if day_file or month_file:
-        save_adjustment_nc(sim_fut_ba, init_output['input_calendar'], variable, output_dir, day_file, month_file, encoding)
+        save_adjustment_nc(sim_fut_ba, init_output['input_calendar'], variable, output_dir, day_file, month_file, encoding, ba_attrs, ba_attrs_mon, variable_attrs)
 
     # Clear the temporary directory. Optional but happens by default
     if clear_temp:
@@ -498,7 +479,8 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
     return sim_fut_ba
 
 
-def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_file: str = None, month_file: str = None, encoding = None):
+def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_file: str = None, month_file: str = None, encoding = None, 
+                       ba_attrs: dict = None, ba_attrs_mon: dict = None, variable_attrs: dict = None):
     """
     Saves adjusted data to NetCDF file at specific path
 
@@ -511,10 +493,15 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
     monthly: bool
         Whether to aggregate to monthly data before saving
     """
+    # If attributes supplied, replace them
+    if ba_attrs is not None:
+        sim_fut_ba.attrs = ba_attrs    
+    if variable_attrs is not None:
+        sim_fut_ba[variable].attrs = variable_attrs
 
     # Make sure we've computed
-    sim_fut_ba = sim_fut_ba.persist()
-    
+    # sim_fut_ba = sim_fut_ba.transpose('time', 'lat', 'lon')
+    sim_fut_ba = sim_fut_ba.compute()    
 
     # If not saving daily data in long term
     day_flag = False
@@ -529,58 +516,29 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
         AttributeError('Unable to convert calendar')
 
     # Save daily data
-    write_job = sim_fut_ba.to_netcdf(os.path.join(output_dir, day_file), encoding={variable: encoding}, compute=True)
-    progress(write_job)
+    sim_fut_ba[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, day_file), encoding=encoding)
     sim_fut_ba.close()
 
     # If monthly, save monthly aggregation
     if month_file:
-        # Aggregation function for each chunk
-        def my_agg_func(x):
-            return x.resample(time='1MS').mean(dim='time').transpose('lon', 'lat', 'time')
 
         # Read in Data
-        sim_fut_ba = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'lat': 10, 'lon': 10, 'time': -1})
+        sim_fut_ba = xr.open_mfdataset(os.path.join(output_dir, day_file), chunks={'time': 365})
 
-        # Get details for template
-        # What the time coords will be after aggregation
-        months = np.unique(sim_fut_ba.time.dt.month)
-        years = np.unique(sim_fut_ba.time.dt.year)
-        unique = []
-        for y in years: 
-            for m in months:
-                unique.append((y,m)) 
-        times = [dt.datetime.strptime(f'{y}-{m}-01', '%Y-%m-%d') for (y, m) in unique]
+        # Compute Monthly Means
+        sim_fut_ba = sim_fut_ba.resample(time='M').mean('time').compute()
 
-        # Dimensionality
-        lat_dim = len(sim_fut_ba[variable].lat)
-        lon_dim = len(sim_fut_ba[variable].lon)
-        time_dim = len(times)
-
-        # Temp array of matching size
-        zeros = np.zeros((lon_dim, lat_dim, time_dim))
-
-        # Template of the output for map blocks
-        template = xr.Dataset(
-            data_vars = {
-                variable: (['lon', 'lat', 'time'], zeros)
-            },
-            coords = {
-                'lat': sim_fut_ba[variable].lat,
-                'lon': sim_fut_ba[variable].lon,
-                'time': times
-            }
-        ).chunk({'lon': 10, 'lat': 10, 'time': -1})
-
-        # Map blocks
-        output = xr.map_blocks(my_agg_func, sim_fut_ba, template=template)
+        # If attributes supplied, set them
+        if ba_attrs_mon is not None:
+            sim_fut_ba.attrs = ba_attrs_mon    
+        if variable_attrs is not None:
+            sim_fut_ba[variable].attrs = variable_attrs
 
         # Write out
-        write_job = output.to_netcdf(os.path.join(output_dir, month_file), compute=True)
+        write_job = sim_fut_ba[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
         progress(write_job)
 
         # Close
-        output.close()
         sim_fut_ba.close()
     
     # Delete daily data if not wanted
