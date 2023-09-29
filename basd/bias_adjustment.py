@@ -516,6 +516,7 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
         AttributeError('Unable to convert calendar')
 
     # Save daily data
+    sim_fut_ba = sim_fut_ba.transpose('time', 'lat', 'lon', ...)
     sim_fut_ba[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, day_file), encoding=encoding)
     sim_fut_ba.close()
 
@@ -535,6 +536,7 @@ def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_fil
             sim_fut_ba[variable].attrs = variable_attrs
 
         # Write out
+        sim_fut_ba.transpose('time', 'lat', 'lon', ...)
         write_job = sim_fut_ba[['time', 'lat', 'lon', variable]].to_netcdf(os.path.join(output_dir, month_file), encoding=encoding, compute=True)
         progress(write_job)
 
