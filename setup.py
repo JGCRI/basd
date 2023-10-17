@@ -25,7 +25,7 @@ setup(
     #python_requires='>=3.6.*, <4',
     include_package_data=True,
     install_requires=[
-        "dask",
+        "dask[complete]",
         "joblib",
         "matplotlib!=3.6.1,>=3.1",
         "numpy",
@@ -35,7 +35,7 @@ setup(
         "PyYAML",
         "rasterio",
         "rioxarray",
-        "scipy",
+        "scipy[complete]",
         "seaborn",
         "xarray"
     ],
