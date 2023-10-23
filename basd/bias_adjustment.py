@@ -518,6 +518,22 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
     # Save output
     sim_fut_ba[variable].data, unadjusted_array, non_standard_array = dask.compute(ba_output_data, unadjusted_array, non_standard_array)
 
+    # Create xarray of diagnostic results
+    diagnostic_dataset = xr.Dataset(
+        data_vars={
+            'unadjusted': (['lat', 'lon'], unadjusted_array),
+            'non_standard': (['lat', 'lon'], non_standard_array)
+        },
+        coords={
+            'lat': sim_fut.lat.values,
+            'lon': sim_fut.lon.values
+        }
+    )
+
+    # Save diagnostics
+    os.makedirs(os.path.join(output_dir, 'diagnostic'), exist_ok=True)
+    diagnostic_dataset.to_netcdf(os.path.join(output_dir, 'diagnostic', 'adjustment_status.nc'))
+
     # If provided a path to save NetCDF file, save adjusted DataSet,
     # else just return the result
     if day_file or month_file:
