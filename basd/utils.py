@@ -866,7 +866,7 @@ def adjust_bias_one_month(data, years, params):
 
     # TODO: Implement copula mbcn adjustment?
 
-    y = map_quantiles_parametric_trend_preserving(data, params)
+    y, unadjusted, non_standard = map_quantiles_parametric_trend_preserving(data, params)
 
     # re-introducing the trend
     if params.detrend:
@@ -874,7 +874,7 @@ def adjust_bias_one_month(data, years, params):
 
     # TODO: assert to infs or nans
 
-    return y
+    return y, unadjusted, non_standard
 
 
 def get_data_within_thresholds(data, params):
@@ -1138,22 +1138,25 @@ def map_quantiles_non_parametric_brute_force(x, y):
     -------
     z: np.Array
         Result of quantile mapping.
+    non_standard: int
+        0 when working normally, 1 when warning
 
     """
     if x.size == 0:
         msg = 'found no values in x: returning x'
-        warnings.warn(msg)
-        return x
+        # TODO: Maybe have separate log file for warnings
+        # warnings.warn(msg)
+        return x, 1
 
     if np.unique(y).size < 2:
         msg = 'found fewer then 2 different values in y: returning x'
-        warnings.warn(msg)
-        return x
+        # warnings.warn(msg)
+        return x, 1
 
     p_x = (sps.rankdata(x) - 1.) / x.size  # percent points of x
     p_y = np.linspace(0., 1., y.size)  # percent points of sorted y
     z = np.interp(p_x, p_y, np.sort(y))  # quantile mapping
-    return z
+    return z, 0
 
 
 def map_quantiles_non_parametric_with_constant_extrapolation(x, q_sim, q_obs):
@@ -1190,6 +1193,30 @@ def map_quantiles_non_parametric_with_constant_extrapolation(x, q_sim, q_obs):
 
 
 def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, params):
+    """
+    Parameters:
+    ----------
+    x_source
+    x_target
+    y
+    i_source
+    i_target
+    i_sim_fut
+    params: basd.Parameters
+        Parameters object containing details for the given run
+
+    Returns:
+    --------
+    y
+    unadjusted: int
+        1 if values were left unadjusted
+    non_standard: int
+        1 if values were not fit as asked, but still adjusted
+    """
+    # Diagnostic values
+    unadjusted = 0
+    non_standard = 0
+
     # Determine if distribution has bounds
     lower = params.lower_bound is not None and params.lower_threshold is not None
     upper = params.upper_bound is not None and params.upper_threshold is not None
@@ -1216,7 +1243,7 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
             # map the values in x_source to be quantile-mapped such that
             # their empirical distribution matches the empirical
             # distribution of the within-threshold values of x_sim_fut
-            x_source_map = map_quantiles_non_parametric_brute_force(x_source[i_source], x_source_fit)
+            x_source_map, non_standard = map_quantiles_non_parametric_brute_force(x_source[i_source], x_source_fit)
         else:
             x_source_map = x_source
 
@@ -1242,14 +1269,16 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
         # This is the case when parametric was desired but failed
         if spsdotwhat is not None:
             msg = 'Parametric quantile mapping failed. Performing non-parametric quantile mapping instead.'
-            warnings.warn(msg)
+            non_standard = 1
+            # TODO: Maybe write out to separate log file for warnings
+            # warnings.warn(msg)
         p_zeroone = np.linspace(0., 1., params.n_quantiles + 1)
         q_source_fit = percentile1d(x_source_map, p_zeroone)
         q_target_fit = percentile1d(x_target_fit, p_zeroone)
         y[i_source] = map_quantiles_non_parametric_with_constant_extrapolation(x_source_map, q_source_fit, q_target_fit)
 
         # If doing non-parametric mapping, return here
-        return y
+        return y, unadjusted, non_standard
 
     # From here, assuming that parametric fit was successful
     # Here are the p-values of the simulated future values according to the
@@ -1269,7 +1298,7 @@ def map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, par
     # them to data according to the target distribution
     y[i_source] = spsdotwhat.ppf(p_target, *shape_loc_scale_target)
 
-    return y
+    return y, unadjusted, non_standard
 
 
 def check_shape_loc_scale(spsdotwhat, shape_loc_scale):
@@ -1414,11 +1443,11 @@ def map_quantiles_parametric_trend_preserving(data, params):
     # Non parametric quantile mapping
     # Use all values if unconditional_css_transfer
     if params.unconditional_ccs_transfer:
-        x_target = map_quantiles_non_parametric_trend_preserving(data, params)
+        x_target, unadjusted, non_standard = map_quantiles_non_parametric_trend_preserving(data, params)
     else:
         # use only values within thresholds
         x_target = x_obs_hist.copy()
-        x_target[i_obs_hist] = map_quantiles_non_parametric_trend_preserving(data_within_thresholds, params)
+        x_target[i_obs_hist], unadjusted, non_standard = map_quantiles_non_parametric_trend_preserving(data_within_thresholds, params)
 
     # determine extreme value probabilities of future obs
     p_lower_target, p_upper_target, p_lower_or_upper_target = extreme_value_probabilities(data, params, lower, upper)
@@ -1436,13 +1465,15 @@ def map_quantiles_parametric_trend_preserving(data, params):
     if not np.any(i_target) or not np.any(i_source):
         msg = 'Unable to do any quantile mapping' \
               + ': leaving %i value(s) unadjusted' % np.sum(i_source)
-        warnings.warn(msg)
-        return y
+        # TODO: Perhaps write this to seperate log file for warnings
+        unadjusted = 1
+        # warnings.warn(msg)
+        return y, unadjusted, 0
 
     # map quantiles
-    result = map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, params)
+    result, unadjusted, non_standard = map_quantiles_core(x_source, x_target, y, i_source, i_target, i_sim_fut, params)
 
-    return result
+    return result, unadjusted, non_standard
 
 
 def map_quantiles_non_parametric_trend_preserving(data, params):
@@ -1460,8 +1491,15 @@ def map_quantiles_non_parametric_trend_preserving(data, params):
     -------
     y: array
         Result of quantile mapping or climate change signal transfer.
-
+    unadjusted: int
+        Whether values were left anadusted (1 for yes, 0 for no)
+    non_standard: int
+        Whether adjustment had to tweak input parameters (1 for yes, 0 for no)
     """
+    # Diagnostic values
+    unadjusted = 0
+    non_standard = 0
+
     # Get time series arrays from dict
     x_obs_hist = data['obs_hist']
     x_sim_hist = data['sim_hist']
@@ -1478,11 +1516,15 @@ def map_quantiles_non_parametric_trend_preserving(data, params):
         else:
             msg = 'not enough input data: returning x_sim_fut'
             y = x_sim_fut
-        warnings.warn(msg)
-        return y
+        # TODO: Maybe add separate log file for warnings
+        # warnings.warn(msg)
+        unadjusted = 1
+        return y, unadjusted, non_standard
     elif n < params.n_quantiles + 1:
         msg = 'due to little input data: reducing n_quantiles to %i' % (n - 1)
-        warnings.warn(msg)
+        # TODO: Maybe add separate log file for warnings
+        # warnings.warn(msg)
+        non_standard = 1
     p_zeroone = np.linspace(0., 1., n)
 
     # compute quantiles of input data
@@ -1533,4 +1575,4 @@ def map_quantiles_non_parametric_trend_preserving(data, params):
         msg = 'trend_preservation = ' + params.trend_preservation + ' not supported'
         raise AssertionError(msg)
 
-    return y
+    return y, unadjusted, non_standard
