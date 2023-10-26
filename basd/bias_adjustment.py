@@ -2,6 +2,7 @@ import datetime as dt
 import os
 import shutil
 
+import dask
 from dask.distributed import progress
 import dask.array as da
 import numpy as np
@@ -39,14 +40,22 @@ def running_window_mode(result, window_centers, data_loc, days, years, long_term
     result: x.DataArray
         1D array containing time series of adjusted values
     """
+    # Diagnostic values
+    unadjusted_number = 0
+    non_standard_number = 0
+
     # Adjust bias for each window center
     for window_center in window_centers:
         data_this_window, years_this_window = util.get_data_in_window(window_center, data_loc,
                                                                       days, years, long_term_mean, params)
 
         # Send data to adjust bias one month
-        result_this_window = util.adjust_bias_one_month(data_this_window, years_this_window,
+        result_this_window, unadjusted, non_standard = util.adjust_bias_one_month(data_this_window, years_this_window,
                                                         params)
+
+        # Update diagnostic value
+        unadjusted_number += unadjusted
+        non_standard_number += non_standard
 
         # put central part of bias-adjusted data into result
         m_ba = util.window_indices_for_running_bias_adjustment(days['sim_fut'], window_center, 31)
@@ -55,7 +64,7 @@ def running_window_mode(result, window_centers, data_loc, days, years, long_term
         m_ba_keep = np.in1d(m_ba, m_keep)
         result[m_keep] = result_this_window[m_ba_keep]
 
-    return result
+    return result, unadjusted_number, non_standard_number
 
 
 def month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, params):
@@ -82,6 +91,10 @@ def month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, 
     result: x.DataArray
         1D array containing time series of adjusted values
     """
+    # Diagnostic values
+    unadjusted_number = 0
+    non_standard_number = 0
+
     # Adjust bias for each window center
     for month in params.months:
         data_this_month, years_this_month = util.get_data_in_month(month, data_loc,
@@ -89,25 +102,35 @@ def month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, 
                                                                    long_term_mean, params)
 
         # Send data to adjust bias one month
-        result_this_month = util.adjust_bias_one_month(data_this_month, years_this_month, params)
+        result_this_month, unadjusted, non_standard = util.adjust_bias_one_month(data_this_month, years_this_month, params)
 
         # put bias-adjusted data into result
         m = month_numbers['sim_fut'] == month
         result[m] = result_this_month
 
-    return result
+        # Update diagnostic value
+        unadjusted_number += unadjusted
+        non_standard_number += non_standard
+
+    return result, unadjusted_number, non_standard_number
 
 
 def adjust_bias_chunk(obs_hist, sim_hist, sim_fut, params, days, month_numbers, years):
     # Iterate through each location and adjust bias
     i_locations = np.ndindex(obs_hist.shape[0], obs_hist.shape[1])
 
+    # Diagnostic arrays
+    unadjusted_array = np.zeros((obs_hist.shape[0], obs_hist.shape[1]))
+    non_standard_array = unadjusted_array.copy()
+
     # Unadjusted results of correct shape
     sim_fut_ba = sim_fut
 
     # Find and save results into adjusted DataSet
     for i, i_loc in enumerate(i_locations):
-        result = adjust_bias_one_location_parallel(
+
+        # Get the adjustment at the given lat/lon, and diagnostic details
+        result, unadjusted_number, non_standard_number = adjust_bias_one_location_parallel(
             obs_hist[i_loc],
             sim_hist[i_loc],
             sim_fut[i_loc],
@@ -115,9 +138,15 @@ def adjust_bias_chunk(obs_hist, sim_hist, sim_fut, params, days, month_numbers, 
             days,
             month_numbers,
             years)
+        
+        # Save adjustment at the given location
         sim_fut_ba[i_loc] = result
 
-    return sim_fut_ba
+        # Update the diagnostic arrays
+        unadjusted_array[i_loc] = unadjusted_number
+        non_standard_array[i_loc] = non_standard_number
+
+    return sim_fut_ba, unadjusted_array, non_standard_array
 
 
 def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
@@ -199,16 +228,16 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
     # Get window centers for running window mode
     if params.step_size:
         window_centers = util.window_centers_for_running_bias_adjustment(days, params.step_size)
-        result = running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params)
+        result, unadjusted_number, non_standard_number = running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params)
     else:
-        result = month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, params)
+        result, unadjusted_number, non_standard_number = month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, params)
 
     # If we scaled variable before, time to scale back
     if params.halfwin_ubc:
         result = util.scale_by_upper_bound_climatology(result, ubc_ba, divide=False)
 
     # Return just resulting array if extra details not requested
-    return result
+    return result, unadjusted_number, non_standard_number
 
 
 def init_bias_adjustment(obs_hist: xr.Dataset,
@@ -308,7 +337,9 @@ def init_bias_adjustment(obs_hist: xr.Dataset,
         'input_calendar': input_calendar, 
         'days': days, 
         'month_numbers': month_numbers, 
-        'years': years
+        'years': years,
+        'lat_chunk_size': lat_chunk_size,
+        'lon_chunk_size': lon_chunk_size
         }
 
 
@@ -453,16 +484,35 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
     sim_fut_ba = sim_fut.copy()
 
     # Set up dask computation
-    ba_output_data = da.map_blocks(adjust_bias_chunk,
-                                    obs_hist[variable].data,
-                                    sim_hist[variable].data,
-                                    sim_fut[variable].data,
-                                    params=params,
-                                    days=days, month_numbers=month_numbers, years=years,
-                                    dtype=object, chunks=sim_fut[variable].chunks)
+    ba_output_data, unadjusted_array, non_standard_array = da.apply_gufunc(
+        adjust_bias_chunk,
+        '(i),(i),(j)->(j),(),()',
+        obs_hist[variable].data,
+        sim_hist[variable].data,
+        sim_fut[variable].data,
+        params=params,
+        days=days, month_numbers=month_numbers, years=years,
+        output_dtypes=(float,float,float)
+    )
 
     # Save output
-    sim_fut_ba[variable].data = ba_output_data
+    sim_fut_ba[variable].data, unadjusted_array, non_standard_array = dask.compute(ba_output_data, unadjusted_array, non_standard_array)
+
+    # Create xarray of diagnostic results
+    diagnostic_dataset = xr.Dataset(
+        data_vars={
+            'unadjusted': (['lon', 'lat'], unadjusted_array),
+            'non_standard': (['lon', 'lat'], non_standard_array)
+        },
+        coords={
+            'lat': sim_fut.lat.values,
+            'lon': sim_fut.lon.values
+        }
+    )
+
+    # Save diagnostics
+    os.makedirs(os.path.join(output_dir, 'diagnostic'), exist_ok=True)
+    diagnostic_dataset.to_netcdf(os.path.join(output_dir, 'diagnostic', 'adjustment_status.nc'))
 
     # If provided a path to save NetCDF file, save adjusted DataSet,
     # else just return the result
@@ -476,7 +526,7 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
         except OSError as e:
             print("Error: %s : %s" % (init_output['temp_path'], e.strerror))
     
-    return sim_fut_ba
+    return sim_fut_ba, unadjusted_array, non_standard_array
 
 
 def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_file: str = None, month_file: str = None, encoding = None, 
@@ -632,9 +682,9 @@ def adjust_bias_one_location(init_output, i_loc, clear_temp: bool = False, full_
     # Get window centers for running window mode
     if params.step_size:
         window_centers = util.window_centers_for_running_bias_adjustment(days, params.step_size)
-        result = running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params)
+        result, _, _ = running_window_mode(result, window_centers, data_loc, days, years, long_term_mean, params)
     else:
-        result = month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, params)
+        result, _, _ = month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, params)
 
     # If we scaled variable before, time to scale back
     if params.halfwin_ubc:
