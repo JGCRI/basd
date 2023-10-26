@@ -1,10 +1,10 @@
 import numpy as np
-import warnings
 import pandas as pd
 from pandas import Series
 import scipy.interpolate as spi
 import scipy.stats as sps
 from scipy.signal import convolve
+import warnings
 
 from basd.ba_params import Parameters
 
@@ -1367,9 +1367,12 @@ def fit(spsdotwhat, x, fwords: dict):
     """
     # Try maximum likelihood estimation
     try:
+        warnings.filterwarnings("ignore")
         shape_loc_scale = spsdotwhat.fit(x, **fwords)
+        warnings.resetwarnings()
     except Exception as e:
-        print(f'Exception: {e.__class__}, was unable to fit using MLE')
+        # TODO: Maybe add warnings/exceptions to additional log file
+        # print(f'Exception: {e.__class__}, was unable to fit using MLE')
         shape_loc_scale = (np.nan,)
 
     # Try maximum likelihood estimation
@@ -1397,7 +1400,8 @@ def fit(spsdotwhat, x, fwords: dict):
     # Check again
     if check_shape_loc_scale(spsdotwhat, shape_loc_scale):
         msg = 'Failed fit: returning None'
-        warnings.warn(msg)
+        # TODO: Maybe put warning message in seperate log file
+        # warnings.warn(msg)
         return None
     elif msg != 'Maximum likelihood estimation succeeded.':
         msg += ' succeeded.'
@@ -1406,7 +1410,8 @@ def fit(spsdotwhat, x, fwords: dict):
     ks_stat = sps.kstest(x, spsdotwhat.name, args=shape_loc_scale)[0]
     if ks_stat > .5:
         msg += ' Fit is not good: returning None.'
-        warnings.warn(msg)
+        # TODO: Maybe put warning message in seperate log file
+        # warnings.warn(msg)
         return None
 
     return shape_loc_scale
