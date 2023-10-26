@@ -480,28 +480,8 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
     sim_hist[variable] = sim_hist[variable].transpose('lon', 'lat', 'time')
     sim_fut[variable] = sim_fut[variable].transpose('lon', 'lat', 'time')
 
-    # # Get lat/lon chunked coordinates
-    # lon_size = obs_hist.sizes['lon']
-    # lat_size = obs_hist.sizes['lat']
-    # lat_grid = obs_hist.lat.values.repeat(lon_size).reshape((lat_size,lon_size)).transpose().reshape((lon_size,lat_size,1))
-    # lon_grid = obs_hist.lon.values.repeat(lat_size).reshape((lon_size,lon_size,1))
-    # lat_dask_array = da.from_array(lat_grid, chunks=(init_output['lat_chunk_size'], init_output['lon_chunk_size'], 1))
-    # lon_dask_array = da.from_array(lon_grid, chunks=(init_output['lat_chunk_size'], init_output['lon_chunk_size'], 1))
-
     # Make temp copy of correct shape for final data
     sim_fut_ba = sim_fut.copy()
-
-    # Set up dask computation
-    # ba_output_data = da.map_blocks(adjust_bias_chunk,
-    #                                 obs_hist[variable].data,
-    #                                 sim_hist[variable].data,
-    #                                 sim_fut[variable].data,
-    #                                 lat_dask_array,
-    #                                 lon_dask_array,
-    #                                 params=params,
-    #                                 days=days, month_numbers=month_numbers, years=years,
-    #                                 dtype=object, 
-    #                                 chunks=sim_fut[variable].chunks)
 
     # Set up dask computation
     ba_output_data, unadjusted_array, non_standard_array = da.apply_gufunc(
@@ -521,8 +501,8 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
     # Create xarray of diagnostic results
     diagnostic_dataset = xr.Dataset(
         data_vars={
-            'unadjusted': (['lat', 'lon'], unadjusted_array),
-            'non_standard': (['lat', 'lon'], non_standard_array)
+            'unadjusted': (['lon', 'lat'], unadjusted_array),
+            'non_standard': (['lon', 'lat'], non_standard_array)
         },
         coords={
             'lat': sim_fut.lat.values,
