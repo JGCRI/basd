@@ -26,6 +26,7 @@ setup(
     include_package_data=True,
     install_requires=[
         "dask[complete]",
+        "intake",
         "joblib",
         "matplotlib!=3.6.1,>=3.1",
         "numpy",
@@ -37,7 +38,8 @@ setup(
         "rioxarray",
         "scipy[complete]",
         "seaborn",
-        "xarray"
+        "xarray",
+        "zarr"
     ],
     extras_require={
         'dev': [
