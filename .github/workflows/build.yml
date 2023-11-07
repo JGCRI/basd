@@ -1,6 +1,8 @@
-name: Python Package Using Anaconda
+name: build
 
-on: [push, pull_request]
+# on: [push, pull_request]
+# Temp just on PR so not running while trying to test other workflows
+on: [pull_request]
 
 jobs:
   build-linux:
