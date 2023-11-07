@@ -4,14 +4,6 @@ basd.tests package
 Submodules
 ----------
 
-basd.tests.test\_config module
-------------------------------
-
-.. automodule:: basd.tests.test_config
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 basd.tests.test\_utils module
 -----------------------------
 

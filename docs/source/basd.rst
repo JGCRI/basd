@@ -28,10 +28,10 @@ basd.bias\_adjustment module
    :undoc-members:
    :show-inheritance:
 
-basd.config module
-------------------
+basd.statistical\_downscaling module
+----------------------------
 
-.. automodule:: basd.config
+.. automodule:: basd.statistical_downscaling
    :members:
    :undoc-members:
    :show-inheritance:
@@ -48,6 +48,14 @@ basd.utils module
 -----------------
 
 .. automodule:: basd.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+basd.sd\_utils module
+-----------------
+
+.. automodule:: basd.sd_utils
    :members:
    :undoc-members:
    :show-inheritance:
