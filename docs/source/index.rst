@@ -6,17 +6,23 @@
 Welcome to basd's documentation!
 ================================
 
+``basd`` is an open-source Python package for bias adjustment and statistical downscaling of climate model output.
+
+``basd`` was created to:
+
+- Bias adjust climate variables at specific locations or by global grid,
+- Downscale simulated model outcomes to the resolution of observational data,
+- Provide tools for visualization, cross validation, and other tools to better understand methods.
+
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: Getting Started:
 
-   modules
+   getting-started/installation
+   getting-started/quickstarter
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Python API
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   reference/api
