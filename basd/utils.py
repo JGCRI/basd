@@ -134,7 +134,7 @@ def aggregate_periodic(arr, halfwin, aggregator='mean'):
     return rm
 
 
-def get_upper_bound_climatology(data_arr, days, halfwin):
+def get_upper_bound_climatology(data_arr, days, halfwin, warn=False):
     """
     Estimates an annual cycle of upper bounds as running mean values of running
     maximum values of multi-year daily maximum values.
@@ -166,7 +166,8 @@ def get_upper_bound_climatology(data_arr, days, halfwin):
     if n != 366:
         msg = (f'Upper bound climatology only defined for {n} days of the year:'
                ' this may imply an invalid computation of the climatology')
-        warnings.warn(msg)
+        if warn:
+            warnings.warn(msg)
 
     # The max value in the data for each day of the year
     daily_max = np.empty(unique_days.size, data_arr.dtype)
@@ -1369,7 +1370,7 @@ def fit(spsdotwhat, x, fwords: dict):
     try:
         warnings.filterwarnings("ignore")
         shape_loc_scale = spsdotwhat.fit(x, **fwords)
-        warnings.resetwarnings()
+        # warnings.resetwarnings()
     except Exception as e:
         # TODO: Maybe add warnings/exceptions to additional log file
         # print(f'Exception: {e.__class__}, was unable to fit using MLE')
