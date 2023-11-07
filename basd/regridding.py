@@ -8,6 +8,19 @@ import xesmf
 
 
 def factors(n):
+    """
+    Function for finding factors of 'n'.
+
+    Parameters
+    ----------
+    n: int
+        Integer to find factors of
+
+    Returns
+    -------
+    factors: np.array
+        Array of integer factors of 'n'.
+    """
     step = 2 if n % 2 else 1
     return set(reduce(list.__add__,
                       ([i, n // i] for i in range(1, int(sqrt(n)) + 1, step) if n % i == 0)))
@@ -97,6 +110,8 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
         Simulated data at coarse resolution
     variable: str
         The variable to be reprojected
+    periodic: bool
+        Whether the input data is periodic (wraps around the full globe)
 
     Returns
     -------
@@ -118,8 +133,6 @@ def reproject_for_integer_factors(obs_fine: xr.Dataset, sim_coarse: xr.Dataset, 
         return sim_coarse
 
     # Else, get the nearest integer factor that divides the grid evenly
-    # TODO: Broken for grids that are already less than 1 degree. Currently always downscales,
-    #       which currently leads to coarse grid being same as fine grid
     lat_facts = factors(len(fine_lats))
     lon_facts = factors(len(fine_lons))
     # If we are thinking about downscaling to the observational dataset, don't. Instead, upscale.
