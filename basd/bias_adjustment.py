@@ -37,8 +37,12 @@ def running_window_mode(result, window_centers, data_loc, days, years, long_term
 
     Returns
     -------
-    result: x.DataArray
+    result: xr.DataArray
         1D array containing time series of adjusted values
+    unadjusted_number: int
+        Number of windows which were left unadjusted
+    non_standard_number: int
+        Number of windows which were adjusted using a non-default method
     """
     # Diagnostic values
     unadjusted_number = 0
@@ -88,8 +92,12 @@ def month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, 
 
     Returns
     -------
-    result: x.DataArray
+    result: xr.DataArray
         1D array containing time series of adjusted values
+    unadjusted_number: int
+        Number of months which were left unadjusted
+    non_standard_number: int
+        Number of months which were adjusted using a non-default method
     """
     # Diagnostic values
     unadjusted_number = 0
@@ -116,6 +124,36 @@ def month_to_month_mode(result, data_loc, month_numbers, years, long_term_mean, 
 
 
 def adjust_bias_chunk(obs_hist, sim_hist, sim_fut, params, days, month_numbers, years):
+    """
+    Performs bias adjustment for a chunk of lat/lon coordinates in a loop. This is intended to be used with Dask, so each input
+    will actually be a portion of the full data.
+
+    Parameters
+    ----------
+    obs_hist: np.array
+        3D array of reference climate values with dimensions lon, lat, time in order
+    sim_hist: np.array
+        3D array of climate values over the same time period as obs_hist with dimensions lon, lat, time in order
+    sim_fut: np.array
+        3D array of reference climate values with dimensions lon, lat, time in order, on a different time period as obs_hist/sim_hist
+    params: Parameters
+        object that holds parameters for bias adjustment
+    days: dict
+        array of days for each input data array
+    month_numbers: dict
+        array of months for each input data array
+    years: dict
+        array of years for each input data array
+
+    Returns
+    -------
+    sim_fut_ba: np.array
+        3D array of same shape as sim_fut, but with bias adjusted values
+    unadjusted_array: np.array
+        2D array (lat/lon), where each cell value is the number of windows which were left unadjusted at that lat/lon
+    non_standard_array: np.array
+        2D array (lat/lon), where each cell value is the number of windows which were adjusted using a non-default method
+    """
     # Iterate through each location and adjust bias
     i_locations = np.ndindex(obs_hist.shape[0], obs_hist.shape[1])
 
@@ -153,16 +191,16 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
                                       params,
                                       days, month_numbers, years):
     """
-    Bias adjusts one grid cell
+    Bias adjusts one grid cell.
 
     Parameters
     ----------
-    obs_hist_loc: xr.DataArray
-        Observational data at given location
+    obs_hist_loc: np.array
+        Historical reference data at given location
     sim_hist_loc: xr.DataArray
         Historical simulated data at given location
     sim_fut_loc: xr.DataArray
-        Future simulated data at given location
+        Simulated data at given location over the application period
     params: Parameters
         Object that defines BA parameters
     days: dict
@@ -176,6 +214,10 @@ def adjust_bias_one_location_parallel(obs_hist_loc, sim_hist_loc, sim_fut_loc,
     -------
     sim_fut_ba_loc: xarray.DataArray
         adjusted time series with times, lat and lon
+    unadjusted_number: int
+        Works as a bool (0 or 1), whether data was adjusted (0) or not (1)
+    non_standard_number: int
+        Works as a bool (0 or 1), whether data was adjusted using default method (0) or not (1)
     """
     # Print out location being gridded
     # lat = float(obs_hist_loc['lat'])
@@ -250,6 +292,10 @@ def init_bias_adjustment(obs_hist: xr.Dataset,
                          temp_path: str = 'basd_temp_path',
                          periodic: bool = True):
     """
+    Prepares data for bias adjustment process. Reshapes data to be conforming with one-another, asserts that
+    data is suited for bias adjustment, saves details important to be passed along to bias adjustment process,
+    and saves reshaped data to a temp directory with the correct chunks and format to be read in later.
+
     Parameters
     ----------
     obs_hist: xr.Dataset
@@ -347,6 +393,20 @@ def assert_full_period_coverage(datasets):
     """
     Raises an assertion error if years aren't fully covered. Trims data to the first Jan 1st
     available to the last Dec 31st available.
+
+    Parameters
+    ----------
+    datasets: dict
+        Dictionary with keys being the name of each input dataset, and values being the input datasets
+
+    Returns
+    -------
+        obs_hist: xr.Dataset
+            The input dataset (obs_hist), trimmed if needed to only contain complete years.
+        sim_hist: xr.Dataset
+            The input dataset (sim_hist), trimmed if needed to only contain complete years.
+        sim_fut: xr.Dataset
+            The input dataset (sim_fut), trimmed if needed to only contain complete years.
     """
 
     for key, data in datasets.items():
@@ -408,6 +468,23 @@ def assert_consistency_of_data_resolution(datasets):
     Raises an assertion error if data are not of the same shape or cannot be aggregated to
     the same resolution. Otherwise, it will force data to have same spatial resolution via
     aggregation.
+
+    Parameters
+    ----------
+    datasets: dict
+        Dictionary with keys being the name of each input dataset, and values being the input datasets
+
+    Returns
+    -------
+        obs_hist: xr.Dataset
+            The input dataset (obs_hist), aggregated if needed to the most coarse input spatial data resolution.
+        sim_hist: xr.Dataset
+            The input dataset (sim_hist), aggregated if needed to the most coarse input spatial data resolution.
+        sim_fut: xr.Dataset
+            The input dataset (sim_fut), aggregated if needed to the most coarse input spatial data resolution.
+        datasets: dict
+            Dictionary with keys being the name of each input dataset, and values being the updated datasets
+
     """
     obs_hist = datasets['obs_hist']
     sim_hist = datasets['sim_hist']
@@ -440,26 +517,37 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
                 day_file: str = None, month_file: str = None, encoding = None, 
                 ba_attrs: dict = None, ba_attrs_mon: dict = None, variable_attrs: dict = None):
     """
-    Does bias adjustment at every location of input data
+    Does bias adjustment at every location of input data. Save data as NetCDF (if file name(s) supplied), and save diagnostic output file.
 
     Parameters
     ----------
     init_output: dict
         Dictionary of details relevant to Bias Adjustment, created during initialization
+    output_dir: str
+        Path to where we save the data
     clear_temp: bool
         Whether or not to clear temporary directory when done. Cleared by default.
-    file: str
-        Where to save the output as .nc file. (Optional, can just return output without saving)
+    day_file: str
+        Name of the output daily data .nc file. (Optional, don't need to save daily data)
+    month_file: str
+        Name of the output monthly data .nc file. (Optional, don't need to save monthly data)
     encoding: dict
         Parameter for to_netcdf function
-    monthly: bool
-        Whether to aggregate to monthly data before saving
+    ba_attrs: dict
+        Dictionary that contains the daily data global attributes to save in the NetCDF output file metadata.
+    ba_attrs_mon: dict
+        Dictionary that contains the monthly data global attributes to save in the NetCDF output file metadata.
+    variable_attrs: dict
+        Dictionary that contains the variable-specific attributes to save in the NetCDF output file metadata.
 
     Returns
     -------
-    sim_fut_ba: DataSet
+    sim_fut_ba: xr.Dataset
         Temporal grid of adjusted observations
-
+    unadjusted_array: xr.Dataset
+        2D array (lat/lon), where each cell value is the number of windows which were left unadjusted at that lat/lon
+    non_standard_array: xr.Dataset
+        2D array (lat/lon), where each cell value is the number of windows which were adjusted using a non-default method
     """
     # Get details from initialization that we use multiple times
     temp_path = init_output['temp_path']
@@ -532,16 +620,30 @@ def adjust_bias(init_output, output_dir: str = None, clear_temp: bool = True,
 def save_adjustment_nc(sim_fut_ba, input_calendar, variable, output_dir, day_file: str = None, month_file: str = None, encoding = None, 
                        ba_attrs: dict = None, ba_attrs_mon: dict = None, variable_attrs: dict = None):
     """
-    Saves adjusted data to NetCDF file at specific path
+    Saves adjusted data to NetCDF file. Takes path, file name(s), encoding, and metadata information.
 
     Parameters
     ----------
-    file: str
-        Location and name string to save output file
+    sim_fut_ba: xr.Dataset
+        The bias adjusted dataset to save.
+    input_calendar: str
+        The calendar that the input datasets use. (ex. gregorian, noleap, 360_day)
+    variable: str
+        Name of the climate variable of the current dataset
+    output_dir: str
+        Path to where the NetCDF file will be created
+    day_file: str
+        Name of the daily data NetCDF file (optional)
+    month_file: str
+        Name of the monthly data NetCDF file (optional)
     encoding: dict
-        Parameter for to_netcdf function
-    monthly: bool
-        Whether to aggregate to monthly data before saving
+        Parameter for to_netcdf function which describes how the NetCDF data will be saved on disk.
+    ba_attrs: dict
+        Dictionary that contains the daily data global attributes to save in the NetCDF output file metadata.
+    ba_attrs_mon: dict
+        Dictionary that contains the monthly data global attributes to save in the NetCDF output file metadata.
+    variable_attrs: dict
+        Dictionary that contains the variable-specific attributes to save in the NetCDF output file metadata.
     """
     # If attributes supplied, replace them
     if ba_attrs is not None:

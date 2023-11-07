@@ -19,23 +19,31 @@ def get_data_at_loc(loc,
                     obs_fine, sim_coarse, sim_fine,
                     month_numbers, downscaling_factors, sum_weights):
     """
-    Function for extracting the data from the desired location and in the desired form
+    Function for extracting the data for a single cell.
 
     Parameters
     ----------
     loc: tuple
         (lon index, lat index)
-    obs_fine
-    sim_coarse
-    sim_fine
-    month_numbers
-    downscaling_factors
-    sum_weights
+    obs_fine: np.array
+        3D array of reference data over the target period at fine spatial resolution with coordinates lon, lat, time in order
+    sim_coarse: np.array
+        3D array of simulated data over the application period at coarse spatial resolution with coordinates lon, lat, time in order
+    sim_fine: np.array
+        3D array of simulated data over the application period at fine spatial resolution (interpolated) with coordinates lon, lat, time in order
+    month_numbers: dict
+        array of months for each input data array
+    downscaling_factors: dict
+        The factors in which we are increasing spatial resolution for both lat and lon.
+    sum_weights: array
+        Array of weights based on the area of a grid cell, which changes with lat.
 
     Returns
     -------
     data: dict
+        Arrays of the input data at the single lat/lon combination reshaped
     sum_weights_loc: array
+        Array of grid cell area weights reshaped to match reshaped data
     """
     # Empty data dict
     data = {}
@@ -78,7 +86,7 @@ def downscale_chunk(obs_fine, sim_coarse, sim_fine, weights,
                     params, month_numbers,
                     downscaling_factors, rotation_matrices):
     """
-    Performs the downscaling routine on each cell of the provided chunk
+    Performs the downscaling routine on each cell of the provided chunk of data.
 
     Parameters
     ----------
@@ -143,12 +151,18 @@ def downscale_one_location_parallel(loc, params,
 
     Parameters
     ----------
-    rotation_matrices
-    params
-    data_weights
-    downscaling_factors
-    loc
-    month_numbers
+    loc: tuple
+        Lat/lon tuple of interest
+    params: Parameters
+        Object that defines parameters for variable at hand
+    data_weights: tuple
+        Output of get_data_at_loc. Dictionary of data, and array of grid cell area weightings.
+    month_numbers: dict
+        Arrays that relate data to the month number it's associated with
+    downscaling_factors: dict
+        M/n and N/n, factor between the two different grid resolutions
+    rotation_matrices: list
+        (N,N) ndarray orthogonal rotation matrices
 
     Returns
     -------
@@ -188,6 +202,29 @@ def downscale_one_location_parallel(loc, params,
 
 
 def downscale_month_by_month(data, sum_weights, long_term_mean, month_numbers, rotation_matrices, params):
+    """
+    Downscales data for each month at the given grid cell.
+
+    Parameters
+    ----------
+    data: dict
+        Dictionary of input data arrays
+    sum_weights: np.array
+        Array of grid cell area weights
+    long_term_mean: float
+        Mean value over all time steps for invalid value sampling
+    month_numbers: dict
+        Arrays that relate data to the month number it's associated with
+    rotation_matrices: list
+        (N,N) ndarray orthogonal rotation matrices
+    params: Parameters
+        Object that defines parameters for variable at hand
+
+    Returns
+    -------
+    results: np.array
+        Array which is the same shape as the fine resolution input simulation data, but with values replaced by downscaling method.
+    """
     # Get form of result
     result = data['sim_fine'].copy()
 
@@ -418,6 +455,13 @@ def analyze_input_grids(obs_fine, sim_coarse):
     Asserts that grids are of compatible sizes, and returns scaling factors,
     direction of coordinate sequence, and whether the sequence is circular
 
+    Parameters
+    ----------
+    obs_fine: xr.Dataset
+        Reference dataset
+    sim_coarse: xr.Dataset
+        Simulated dataset to downscale
+
     Returns
     -------
     downscaling_factors: dict
@@ -495,8 +539,10 @@ def downscale(init_output, output_dir: str = None, clear_temp: bool = True,
 
     Parameters
     ----------
-    file: str
-        Location and name string to save output file
+    init_output: dict
+        Output of init_downscaling. Holds details relevant to the downscaling process scraped from input data.
+    output_dir: str
+        Path to save NetCDF output
     clear_temp: bool
         Whether or not to clean/remove intermediate files/directory
     day_file: str
@@ -578,10 +624,24 @@ def save_downscale_nc(sim_fine_out, variable, input_calendar, output_dir, day_fi
 
     Parameters
     ----------
-    file: str
-        Location to and name of file to save downscaled data
+    sim_fine_out: xr.Dataset
+        Downscaled simulation data to save as NetCDF
+    variable: str
+        Name of the climate variable which is currently being used
+    input_calendar: str
+        The calendar used by the input datasets (ex. gregorian, noleap, 360_day)
+    day_file: str
+        Name of the output daily data NetCDF file (optional)
+    month_file: str
+        Name of the output monthly data NetCDF file (optional)
     encoding: dict
         Parameter for to_netcdf function
+    basd_attrs: dict
+        Dictionary of global attributes to write to output daily NetCDF
+    basd_attrs_mon: dict
+        Dictionary of global attributes to write to output monthly NetCDF
+    variable_attrs: dict
+        Dictionary of variable attributes to write to output NetCDF
     """
 
     # If attributes supplied, replace them

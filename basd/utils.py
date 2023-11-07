@@ -134,7 +134,7 @@ def aggregate_periodic(arr, halfwin, aggregator='mean'):
     return rm
 
 
-def get_upper_bound_climatology(data_arr, days, halfwin):
+def get_upper_bound_climatology(data_arr, days, halfwin, warn=False):
     """
     Estimates an annual cycle of upper bounds as running mean values of running
     maximum values of multi-year daily maximum values.
@@ -166,7 +166,8 @@ def get_upper_bound_climatology(data_arr, days, halfwin):
     if n != 366:
         msg = (f'Upper bound climatology only defined for {n} days of the year:'
                ' this may imply an invalid computation of the climatology')
-        warnings.warn(msg)
+        if warn:
+            warnings.warn(msg)
 
     # The max value in the data for each day of the year
     daily_max = np.empty(unique_days.size, data_arr.dtype)
@@ -405,6 +406,31 @@ def window_indices_for_running_bias_adjustment(
 
 
 def get_data_in_window(window_center, data_loc, days, years, long_term_mean, params: Parameters):
+    """
+    Function for getting data only for relevant window of the year.
+
+    Parameters
+    ----------
+    window_center: int
+        Day of the year which the window is centered around
+    data_loc: dict
+        Arrays of the input data at the given lat/lon
+    days: dict
+        array of days for each input data array
+    years: dict
+        array of years for each input data array
+    long_term_mean: dict
+        array of means for each input data array
+    params: Parameters
+        object that holds parameters for bias adjustment
+
+    Returns
+    -------
+    data_this_window: dict
+        Arrays of data only within the given window
+    years_this_window: dict
+        Arrays of the year associated with each point in the resulting data
+    """
     years_this_window = {}
     data_this_window = {}
     for key, data_arr in data_loc.items():
@@ -424,6 +450,31 @@ def get_data_in_window(window_center, data_loc, days, years, long_term_mean, par
 
 
 def get_data_in_month(month, data_loc, years, month_numbers, long_term_mean, params: Parameters):
+    """
+    Function for getting data only for relevant months.
+
+    Parameters
+    ----------
+    month: int
+        The month number
+    data_loc: dict
+        Arrays of the input data at the given lat/lon
+    month_numbers: dict
+        array of months for each input data array
+    years: dict
+        array of years for each input data array
+    long_term_mean: dict
+        array of means for each input data array
+    params: Parameters
+        object that holds parameters for bias adjustment
+
+    Returns
+    -------
+    data_this_month: dict
+        Arrays of data only within the given month
+    years_this_month: dict
+        Arrays of the year associated with each point in the resulting data
+    """
     years_this_month = {}
     data_this_month = {}
     for key, data_arr in data_loc.items():
@@ -474,6 +525,9 @@ def percentile1d(a, p):
 
 
 def chunk_indexes(chunk_sizes):
+    """
+    Function for manually chunking lat/lon sequences. Not a function currently in use.
+    """
     all_lat_indexes = np.arange(sum(chunk_sizes['lat']))
     all_lon_indexes = np.arange(sum(chunk_sizes['lon']))
     lat_indexes = {}
@@ -847,6 +901,27 @@ def randomize_censored_values(x,
 
 
 def adjust_bias_one_month(data, years, params):
+    """
+    Function for applying bias adjustment to the data for a single month and grid cell
+
+    Parameters
+    ----------
+    data: dict
+        Dictionary of data arrays which hold reference, and simulation input data for the given month and location
+    years: dict
+        Arrays which contain the year associated with each data point in each of the input arrays
+    params: Parameters
+        object that holds parameters for bias adjustment 
+
+    Returns
+    -------
+    y: np.array
+        Adjusted simulation data for the given month and location
+    unadjusted: int
+        Works as a bool (0 or 1), whether data was adjusted (0) or not (1)
+    non_standard: int
+        Works as a bool (0 or 1), whether data was adjusted using default method (0) or not (1)
+    """
     # Detrend and randomize censored values
     # Saving future trend for adding back later
     trend_sim_fut = None
@@ -1019,9 +1094,13 @@ def extreme_value_probabilities(data, params, lower, upper):
     Parameters
     ----------
     data: dict
+        Dictionary of data arrays which hold reference, and simulation input data
     params: Parameters
+        object that holds parameters for bias adjustment 
     lower: bool
+        Whether relevant distribution has a lower bound
     upper: bool
+        Whether relevant distribution has an upper bound
 
     Returns
     -------
@@ -1080,10 +1159,13 @@ def indexes_to_map(x_source, x_target, y, params, p_lower_target, p_upper_target
     x_target: np.Array
     y: np.Array
     params: Parameters
+        object that holds parameters for bias adjustment
     p_lower_target: float
     p_upper_target: float
     lower: bool
+        Whether relevant distribution has a lower bound
     upper: bool
+        Whether relevant distribution has an upper bound
 
     Returns
     -------
@@ -1369,7 +1451,7 @@ def fit(spsdotwhat, x, fwords: dict):
     try:
         warnings.filterwarnings("ignore")
         shape_loc_scale = spsdotwhat.fit(x, **fwords)
-        warnings.resetwarnings()
+        # warnings.resetwarnings()
     except Exception as e:
         # TODO: Maybe add warnings/exceptions to additional log file
         # print(f'Exception: {e.__class__}, was unable to fit using MLE')
