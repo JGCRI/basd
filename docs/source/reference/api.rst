@@ -11,25 +11,31 @@ Python API
 Core functionality
 ---------------------------------
 
-basd.adjust_bias
-~~~~~~~~~~~~~~~~
+Define Parameters
+~~~~~~~~~~~~~~~~~
 
-.. autofunction:: basd.adjust_bias
+.. autoclass:: basd.Parameters
 
 
-basd.init_bias_adjustment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Initialize Bias Adjustment
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autofunction:: basd.init_bias_adjustment
 
 
-basd.init_downscaling
+Perform Bias Adjustment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: basd.adjust_bias
+
+
+Initialize Downscaling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autofunction:: basd.init_downscaling
 
 
-basd.downscale
+Perform Downscaling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autofunction:: basd.downscale
