@@ -1,3 +1,0 @@
-nbsphinx
-sphinx_gallery
-sphinx_rtd_theme
