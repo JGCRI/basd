@@ -1,0 +1,1096 @@
+
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>basd.statistical_downscaling &#8212; basd 0.0.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../_static/styles/sphinx-book-theme.css?digest=14f4ca6b54d191a8c7657f6c759bf11a5fb86285" type="text/css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6" />
+  <script src="../../_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=365ca57ee442770a23c6"></script>
+
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?digest=5a5c038af52cf7bc1a1ec88eea08e6366ee68824"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/basd/statistical_downscaling';</script>
+    <link rel="shortcut icon" href="../../_static/FineInCoarse.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+    </nav>
+  
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/FineInCoarse.png" class="logo__image only-light" alt="basd 0.0.0 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/FineInCoarse.png" class="logo__image only-dark" alt="basd 0.0.0 documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item"><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Getting Started:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started/quickstarter.html">Quickstarter</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Python API</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/api.html">Python API</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><label class="sidebar-toggle primary-toggle btn btn-sm" for="__primary" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</label></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script>
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+  <h1>Source code for basd.statistical_downscaling</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">dask.array</span> <span class="k">as</span> <span class="nn">da</span>
+<span class="kn">from</span> <span class="nn">dask.distributed</span> <span class="kn">import</span> <span class="n">progress</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.linalg</span> <span class="k">as</span> <span class="nn">spl</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="kn">from</span> <span class="nn">basd.ba_params</span> <span class="kn">import</span> <span class="n">Parameters</span>
+<span class="kn">import</span> <span class="nn">basd.regridding</span> <span class="k">as</span> <span class="nn">rg</span>
+<span class="kn">import</span> <span class="nn">basd.sd_utils</span> <span class="k">as</span> <span class="nn">sdu</span>
+<span class="kn">import</span> <span class="nn">basd.utils</span> <span class="k">as</span> <span class="nn">util</span>
+
+
+<span class="k">def</span> <span class="nf">get_data_at_loc</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span>
+                    <span class="n">obs_fine</span><span class="p">,</span> <span class="n">sim_coarse</span><span class="p">,</span> <span class="n">sim_fine</span><span class="p">,</span>
+                    <span class="n">month_numbers</span><span class="p">,</span> <span class="n">downscaling_factors</span><span class="p">,</span> <span class="n">sum_weights</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for extracting the data for a single cell.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    loc: tuple</span>
+<span class="sd">        (lon index, lat index)</span>
+<span class="sd">    obs_fine: np.array</span>
+<span class="sd">        3D array of reference data over the target period at fine spatial resolution with coordinates lon, lat, time in order</span>
+<span class="sd">    sim_coarse: np.array</span>
+<span class="sd">        3D array of simulated data over the application period at coarse spatial resolution with coordinates lon, lat, time in order</span>
+<span class="sd">    sim_fine: np.array</span>
+<span class="sd">        3D array of simulated data over the application period at fine spatial resolution (interpolated) with coordinates lon, lat, time in order</span>
+<span class="sd">    month_numbers: dict</span>
+<span class="sd">        array of months for each input data array</span>
+<span class="sd">    downscaling_factors: dict</span>
+<span class="sd">        The factors in which we are increasing spatial resolution for both lat and lon.</span>
+<span class="sd">    sum_weights: array</span>
+<span class="sd">        Array of weights based on the area of a grid cell, which changes with lat.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    data: dict</span>
+<span class="sd">        Arrays of the input data at the single lat/lon combination reshaped</span>
+<span class="sd">    sum_weights_loc: array</span>
+<span class="sd">        Array of grid cell area weights reshaped to match reshaped data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Empty data dict</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Values of the coarse cell over time period</span>
+    <span class="n">coarse_values</span> <span class="o">=</span> <span class="n">sim_coarse</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">month_numbers</span><span class="p">[</span><span class="s1">&#39;sim_coarse&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;sim_coarse&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">coarse_values</span>
+
+    <span class="c1"># Range of indexes of fine cells</span>
+    <span class="n">lat_start</span> <span class="o">=</span> <span class="n">loc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span>
+    <span class="n">lat_end</span> <span class="o">=</span> <span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span>
+    <span class="n">lon_start</span> <span class="o">=</span> <span class="n">loc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span>
+    <span class="n">lon_end</span> <span class="o">=</span> <span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Get the cell weights of relevant latitudes</span>
+    <span class="n">sum_weights_loc</span> <span class="o">=</span> <span class="n">sum_weights</span><span class="p">[</span><span class="n">lat_start</span><span class="p">:</span><span class="n">lat_end</span><span class="p">,</span> <span class="n">lon_start</span><span class="p">:</span><span class="n">lon_end</span><span class="p">]</span>
+
+    <span class="c1"># Value of fine observational cells</span>
+    <span class="n">obs_fine_values</span> <span class="o">=</span> <span class="n">obs_fine</span><span class="p">[</span><span class="n">lat_start</span><span class="p">:</span><span class="n">lat_end</span><span class="p">,</span> <span class="n">lon_start</span><span class="p">:</span><span class="n">lon_end</span><span class="p">]</span>
+
+    <span class="c1"># Values of fine simulated cells</span>
+    <span class="n">sim_fine_values</span> <span class="o">=</span> <span class="n">sim_fine</span><span class="p">[</span><span class="n">lat_start</span><span class="p">:</span><span class="n">lat_end</span><span class="p">,</span> <span class="n">lon_start</span><span class="p">:</span><span class="n">lon_end</span><span class="p">]</span>
+
+    <span class="c1"># reshape. (lat, lon, time) --&gt; (time, lat x lon) ex.) [4 x 4 x 365] --&gt; [365 x 16]</span>
+    <span class="c1"># Spreads fine cell at single time point, first along row then cols.</span>
+    <span class="c1">#  1  2  3  4     \    time 1:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16</span>
+    <span class="c1">#  5  6  7  8  --- \   time 2:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16</span>
+    <span class="c1">#  9 10 11 12  --- /   time 3:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16</span>
+    <span class="c1"># 13 14 15 16     /    time 4:  1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16</span>
+    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;obs_fine&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs_fine_values</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span>
+                                                <span class="n">month_numbers</span><span class="p">[</span><span class="s1">&#39;obs_fine&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;sim_fine&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sim_fine_values</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span>
+                                                <span class="n">month_numbers</span><span class="p">[</span><span class="s1">&#39;sim_coarse&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">sum_weights_loc</span> <span class="o">=</span> <span class="n">sum_weights_loc</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">sum_weights_loc</span>
+
+
+<span class="k">def</span> <span class="nf">downscale_chunk</span><span class="p">(</span><span class="n">obs_fine</span><span class="p">,</span> <span class="n">sim_coarse</span><span class="p">,</span> <span class="n">sim_fine</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span>
+                    <span class="n">params</span><span class="p">,</span> <span class="n">month_numbers</span><span class="p">,</span>
+                    <span class="n">downscaling_factors</span><span class="p">,</span> <span class="n">rotation_matrices</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs the downscaling routine on each cell of the provided chunk of data.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    obs_fine: da.Array</span>
+<span class="sd">        (M,N) observational grid data for a given lat x lon chunk</span>
+<span class="sd">    sim_coarse: da.Array</span>
+<span class="sd">        (m,n) simulated grid data for a given lat x lon chunk</span>
+<span class="sd">    sim_fine: da.Array</span>
+<span class="sd">        (M,N) simulated grid data for a given lat x lon chunk</span>
+<span class="sd">    params: Parameters</span>
+<span class="sd">        Object that defines parameters for variable at hand</span>
+<span class="sd">    weights: da.Array</span>
+<span class="sd">        Weights of fine grids cells according to relative global area</span>
+<span class="sd">    month_numbers: dict</span>
+<span class="sd">        Arrays that relate data to the month number it&#39;s associated with</span>
+<span class="sd">    downscaling_factors: dict</span>
+<span class="sd">        M/n and N/n, factor between the two different grid resolutions</span>
+<span class="sd">    rotation_matrices: list</span>
+<span class="sd">        (N,N) ndarray orthogonal rotation matrices</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    output_chunk: da.Array</span>
+<span class="sd">        (M,N) simulated grid data for a given lat x lon chunk</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Copy of fine resolution simulated data to fill with results</span>
+    <span class="n">output_chunk</span> <span class="o">=</span> <span class="n">sim_fine</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Iterable for each cell in chunk</span>
+    <span class="n">i_locations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndindex</span><span class="p">(</span><span class="n">sim_coarse</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sim_coarse</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="c1"># Iterate through each cell in coarse chunk</span>
+    <span class="k">for</span> <span class="n">i_loc</span> <span class="ow">in</span> <span class="n">i_locations</span><span class="p">:</span>
+        <span class="c1"># Get the climate data and grid cell areas at given location</span>
+        <span class="n">data_weights</span> <span class="o">=</span> <span class="n">get_data_at_loc</span><span class="p">(</span><span class="n">i_loc</span><span class="p">,</span>
+                                       <span class="n">obs_fine</span><span class="p">,</span> <span class="n">sim_coarse</span><span class="p">,</span> <span class="n">sim_fine</span><span class="p">,</span>
+                                       <span class="n">month_numbers</span><span class="p">,</span> <span class="n">downscaling_factors</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span>
+
+        <span class="c1"># Performing the downscaling algorithm</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">downscale_one_location_parallel</span><span class="p">(</span><span class="n">i_loc</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">data_weights</span><span class="p">,</span>
+                                                 <span class="n">month_numbers</span><span class="p">,</span> <span class="n">downscaling_factors</span><span class="p">,</span>
+                                                 <span class="n">rotation_matrices</span><span class="p">)</span>
+
+        <span class="c1"># Save the result to the output chunk object</span>
+        <span class="n">lat_start</span> <span class="o">=</span> <span class="n">i_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span>
+        <span class="n">lat_end</span> <span class="o">=</span> <span class="p">(</span><span class="n">i_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span>
+        <span class="n">lon_start</span> <span class="o">=</span> <span class="n">i_loc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span>
+        <span class="n">lon_end</span> <span class="o">=</span> <span class="p">(</span><span class="n">i_loc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span>
+        <span class="n">output_chunk</span><span class="p">[</span><span class="n">lat_start</span><span class="p">:</span><span class="n">lat_end</span><span class="p">,</span> <span class="n">lon_start</span><span class="p">:</span><span class="n">lon_end</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+
+    <span class="c1"># Return updated chunk</span>
+    <span class="k">return</span> <span class="n">output_chunk</span>
+
+
+<span class="k">def</span> <span class="nf">downscale_one_location_parallel</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span>
+                                    <span class="n">data_weights</span><span class="p">,</span>
+                                    <span class="n">month_numbers</span><span class="p">,</span> <span class="n">downscaling_factors</span><span class="p">,</span>
+                                    <span class="n">rotation_matrices</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Downscales a single coarse grid cell to the resolution of the fine observational grid,</span>
+<span class="sd">    at the given location.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    loc: tuple</span>
+<span class="sd">        Lat/lon tuple of interest</span>
+<span class="sd">    params: Parameters</span>
+<span class="sd">        Object that defines parameters for variable at hand</span>
+<span class="sd">    data_weights: tuple</span>
+<span class="sd">        Output of get_data_at_loc. Dictionary of data, and array of grid cell area weightings.</span>
+<span class="sd">    month_numbers: dict</span>
+<span class="sd">        Arrays that relate data to the month number it&#39;s associated with</span>
+<span class="sd">    downscaling_factors: dict</span>
+<span class="sd">        M/n and N/n, factor between the two different grid resolutions</span>
+<span class="sd">    rotation_matrices: list</span>
+<span class="sd">        (N,N) ndarray orthogonal rotation matrices</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sim_fine_loc: ndarray</span>
+<span class="sd">        3D array of downscaled coarse grid. Size is latitude scaling factor by longitude scaling</span>
+<span class="sd">        factor by time</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Get data at location</span>
+    <span class="n">data</span><span class="p">,</span> <span class="n">sum_weights_loc</span> <span class="o">=</span> <span class="n">data_weights</span>
+
+    <span class="c1"># abort here if there are only missing values in at least one time series</span>
+    <span class="c1"># do not abort though if the if_all_invalid_use option has been specified</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">if_all_invalid_use</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">sdu</span><span class="o">.</span><span class="n">only_missing_values_in_at_least_one_time_series</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">loc</span><span class="si">}</span><span class="s1"> skipped due to missing data&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="c1"># compute mean value over all time steps for invalid value sampling</span>
+    <span class="n">long_term_mean</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">long_term_mean</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">average_valid_values</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">if_all_invalid_use</span><span class="p">,</span>
+                                                        <span class="n">params</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">lower_threshold</span><span class="p">,</span>
+                                                        <span class="n">params</span><span class="o">.</span><span class="n">upper_bound</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">upper_threshold</span><span class="p">)</span>
+
+    <span class="c1"># Result in flattened format</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">downscale_month_by_month</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sum_weights_loc</span><span class="p">,</span>
+                                      <span class="n">long_term_mean</span><span class="p">,</span> <span class="n">month_numbers</span><span class="p">,</span>
+                                      <span class="n">rotation_matrices</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
+    <span class="c1"># Reshape to grid</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">],</span>
+                              <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span>
+                              <span class="n">month_numbers</span><span class="p">[</span><span class="s1">&#39;sim_fine&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">downscale_month_by_month</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sum_weights</span><span class="p">,</span> <span class="n">long_term_mean</span><span class="p">,</span> <span class="n">month_numbers</span><span class="p">,</span> <span class="n">rotation_matrices</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Downscales data for each month at the given grid cell.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data: dict</span>
+<span class="sd">        Dictionary of input data arrays</span>
+<span class="sd">    sum_weights: np.array</span>
+<span class="sd">        Array of grid cell area weights</span>
+<span class="sd">    long_term_mean: float</span>
+<span class="sd">        Mean value over all time steps for invalid value sampling</span>
+<span class="sd">    month_numbers: dict</span>
+<span class="sd">        Arrays that relate data to the month number it&#39;s associated with</span>
+<span class="sd">    rotation_matrices: list</span>
+<span class="sd">        (N,N) ndarray orthogonal rotation matrices</span>
+<span class="sd">    params: Parameters</span>
+<span class="sd">        Object that defines parameters for variable at hand</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    results: np.array</span>
+<span class="sd">        Array which is the same shape as the fine resolution input simulation data, but with values replaced by downscaling method.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get form of result</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;sim_fine&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Get data this month</span>
+    <span class="n">data_this_month</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">month</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">months</span><span class="p">:</span>
+        <span class="c1"># extract data</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="n">month_numbers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="n">month</span>
+            <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="sa">f</span><span class="s1">&#39;No data found for month </span><span class="si">{</span><span class="n">month</span><span class="si">}</span><span class="s1">, in </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">valid_values</span><span class="p">,</span> <span class="n">invalid_values</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">sample_invalid_values</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="n">m</span><span class="p">],</span>
+                                                                      <span class="n">params</span><span class="o">.</span><span class="n">randomization_seed</span><span class="p">,</span>
+                                                                      <span class="n">long_term_mean</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="c1"># TODO: What is up with the parameters for randomize_censored_values?</span>
+            <span class="n">randomized_censored_values</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">randomize_censored_values</span><span class="p">(</span><span class="n">valid_values</span><span class="p">,</span>
+                                                                        <span class="n">params</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">lower_threshold</span><span class="p">,</span>
+                                                                        <span class="n">params</span><span class="o">.</span><span class="n">upper_bound</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">upper_threshold</span><span class="p">,</span>
+                                                                        <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span>
+                                                                        <span class="n">params</span><span class="o">.</span><span class="n">randomization_seed</span><span class="p">,</span>
+                                                                        <span class="mf">10.</span><span class="p">,</span> <span class="mf">10.</span><span class="p">)</span>
+
+            <span class="n">data_this_month</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">randomized_censored_values</span>
+
+        <span class="c1"># do statistical downscaling</span>
+        <span class="n">result_this_month</span> <span class="o">=</span> <span class="n">downscale_one_month</span><span class="p">(</span><span class="n">data_this_month</span><span class="p">,</span> <span class="n">rotation_matrices</span><span class="p">,</span>
+                                                <span class="n">params</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">lower_threshold</span><span class="p">,</span>
+                                                <span class="n">params</span><span class="o">.</span><span class="n">upper_bound</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">upper_threshold</span><span class="p">,</span>
+                                                <span class="n">sum_weights</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
+        <span class="c1"># put downscaled data into result</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">month_numbers</span><span class="p">[</span><span class="s1">&#39;sim_fine&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">month</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_this_month</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">downscale_one_month</span><span class="p">(</span><span class="n">data_this_month</span><span class="p">,</span> <span class="n">rotation_matrices</span><span class="p">,</span>
+                        <span class="n">lower_bound</span><span class="p">,</span> <span class="n">lower_threshold</span><span class="p">,</span>
+                        <span class="n">upper_bound</span><span class="p">,</span> <span class="n">upper_threshold</span><span class="p">,</span>
+                        <span class="n">sum_weights</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Applies the MBCn algorithm with weight preservation. Randomizes censored values</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data_this_month: dict</span>
+<span class="sd">        Keys: obs_fine, sim_coarse, sim_fine</span>
+<span class="sd">        obs_fine: ndarray, observational grid data in the given month</span>
+<span class="sd">        sim_coarse: array, simulated coarse data. One point per time. All values in given month</span>
+<span class="sd">        sim_fine: ndarray, sim_coarse but interpolated to obs_fine spatial resolution</span>
+<span class="sd">    rotation_matrices: list</span>
+<span class="sd">        (N,N) ndarray orthogonal rotation matrices</span>
+<span class="sd">    lower_bound: float/None</span>
+<span class="sd">        Lower bound of variable at hand</span>
+<span class="sd">    lower_threshold: float</span>
+<span class="sd">        Lower threshold of variable at hand</span>
+<span class="sd">    upper_bound: float/None</span>
+<span class="sd">        Upper bound of variable at hand</span>
+<span class="sd">    upper_threshold: float/None</span>
+<span class="sd">        Upper threshold of variable at hand</span>
+<span class="sd">    sum_weights: array</span>
+<span class="sd">        Weights of fine grids cells according to relative global area</span>
+<span class="sd">    params: Parameters</span>
+<span class="sd">        Object that defines parameters for variable at hand</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sim_fine: ndarray</span>
+<span class="sd">        grid of statistically downscaled values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">mbcn_sd_result</span> <span class="o">=</span> <span class="n">sdu</span><span class="o">.</span><span class="n">weighted_sum_preserving_mbcn</span><span class="p">(</span><span class="n">data_this_month</span><span class="p">[</span><span class="s1">&#39;obs_fine&#39;</span><span class="p">],</span>
+                                                      <span class="n">data_this_month</span><span class="p">[</span><span class="s1">&#39;sim_coarse&#39;</span><span class="p">],</span>
+                                                      <span class="n">data_this_month</span><span class="p">[</span><span class="s1">&#39;sim_fine&#39;</span><span class="p">],</span>
+                                                      <span class="n">sum_weights</span><span class="p">,</span>
+                                                      <span class="n">rotation_matrices</span><span class="p">,</span>
+                                                      <span class="n">params</span><span class="o">.</span><span class="n">n_quantiles</span><span class="p">)</span>
+
+    <span class="n">sim_fine</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">randomize_censored_values</span><span class="p">(</span><span class="n">mbcn_sd_result</span><span class="p">,</span>
+                                              <span class="n">lower_bound</span><span class="p">,</span> <span class="n">lower_threshold</span><span class="p">,</span>
+                                              <span class="n">upper_bound</span><span class="p">,</span> <span class="n">upper_threshold</span><span class="p">,</span>
+                                              <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># TODO: assert no infs or nans</span>
+
+    <span class="k">return</span> <span class="n">sim_fine</span>
+
+
+<span class="k">def</span> <span class="nf">generate_cre_matrix</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n: int</span>
+<span class="sd">        Number of rows and columns of the CRE matrix</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    mat: (n,n) ndarray</span>
+<span class="sd">        CRE matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="n">q</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">spl</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>  <span class="c1"># QR decomposition</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">q</span> <span class="o">*</span> <span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">d</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="init_downscaling"><a class="viewcode-back" href="../../reference/api.html#basd.init_downscaling">[docs]</a><span class="k">def</span> <span class="nf">init_downscaling</span><span class="p">(</span><span class="n">obs_fine</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span>
+                     <span class="n">sim_coarse</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span>
+                     <span class="n">variable</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="n">params</span><span class="p">:</span> <span class="n">Parameters</span><span class="p">,</span>
+                     <span class="n">lat_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+                     <span class="n">lon_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+                     <span class="n">temp_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;basd_temp_path&#39;</span><span class="p">,</span>
+                     <span class="n">periodic</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    obs_fine: xr.Dataset</span>
+<span class="sd">        Fine grid of observational data</span>
+<span class="sd">    sim_coarse: xr.Dataset</span>
+<span class="sd">        Coarse grid of simulated data</span>
+<span class="sd">    variable: str</span>
+<span class="sd">        Name of the variable of interest</span>
+<span class="sd">    params: Parameters</span>
+<span class="sd">        Object that specifies the parameters for the variable&#39;s SD routine</span>
+<span class="sd">    lat_chunk_size: int</span>
+<span class="sd">        Size of Dask chunks in latitude dimension to perform downscaling.</span>
+<span class="sd">        If getting errors or warnings for memory, go for smaller chunks. 5x5 is an already pretty small default.</span>
+<span class="sd">    lon_chunk_size: int</span>
+<span class="sd">        Size of Dask chunks in longitude dimension to perform downscaling.</span>
+<span class="sd">    temp_path: str</span>
+<span class="sd">        path to directory where intermediate files are stored</span>
+<span class="sd">    periodic: bool</span>
+<span class="sd">        Whether grid wraps around globe longitudinally. Used during regridding interpolation.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    init_output: dict</span>
+<span class="sd">        Dictionary of details that need to be passed along into the downscaling process</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Set base input data</span>
+    <span class="n">obs_fine</span> <span class="o">=</span> <span class="n">obs_fine</span><span class="o">.</span><span class="n">convert_calendar</span><span class="p">(</span><span class="s1">&#39;proleptic_gregorian&#39;</span><span class="p">,</span> <span class="n">align_on</span><span class="o">=</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="n">missing</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    <span class="n">sim_coarse</span> <span class="o">=</span> <span class="n">sim_coarse</span><span class="o">.</span><span class="n">convert_calendar</span><span class="p">(</span><span class="s1">&#39;proleptic_gregorian&#39;</span><span class="p">,</span> <span class="n">align_on</span><span class="o">=</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="n">missing</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="c1"># Input calendar of the simulation model</span>
+    <span class="n">input_calendar</span> <span class="o">=</span> <span class="n">sim_coarse</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">calendar</span>
+
+    <span class="c1"># Dictionary of datasets to iterate through easily</span>
+    <span class="n">datasets</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;obs_fine&#39;</span><span class="p">:</span> <span class="n">obs_fine</span><span class="p">,</span>
+        <span class="s1">&#39;sim_coarse&#39;</span><span class="p">:</span> <span class="n">sim_coarse</span><span class="p">,</span>
+        <span class="s1">&#39;sim_fine&#39;</span><span class="p">:</span> <span class="n">sim_coarse</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Set dimension names to lat, lon, time</span>
+    <span class="n">datasets</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">set_dim_names</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span>
+    <span class="n">obs_fine</span> <span class="o">=</span> <span class="n">datasets</span><span class="p">[</span><span class="s1">&#39;obs_fine&#39;</span><span class="p">]</span>
+    <span class="n">sim_coarse</span> <span class="o">=</span> <span class="n">datasets</span><span class="p">[</span><span class="s1">&#39;sim_coarse&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Get time details</span>
+    <span class="n">days</span><span class="p">,</span> <span class="n">month_numbers</span><span class="p">,</span> <span class="n">years</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">time_scraping</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span>
+    <span class="k">del</span> <span class="n">datasets</span>
+
+    <span class="c1"># Interpolate coarse grid to be conforming with fine grid</span>
+    <span class="n">sim_coarse</span> <span class="o">=</span> <span class="n">rg</span><span class="o">.</span><span class="n">reproject_for_integer_factors</span><span class="p">(</span><span class="n">obs_fine</span><span class="p">,</span> <span class="n">sim_coarse</span><span class="p">,</span> <span class="n">variable</span><span class="p">,</span> <span class="n">periodic</span><span class="p">)</span>
+
+    <span class="c1"># Analyze input grids</span>
+    <span class="n">downscaling_factors</span> <span class="o">=</span> <span class="n">analyze_input_grids</span><span class="p">(</span><span class="n">obs_fine</span><span class="p">,</span> <span class="n">sim_coarse</span><span class="p">)</span>
+
+    <span class="c1"># Set downscaled grid as copy of fine grid for now</span>
+    <span class="n">sim_fine</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span> <span class="o">=</span> <span class="n">rg</span><span class="o">.</span><span class="n">project_onto</span><span class="p">(</span><span class="n">sim_coarse</span><span class="p">,</span> <span class="n">obs_fine</span><span class="p">,</span> <span class="n">variable</span><span class="p">,</span> <span class="n">periodic</span><span class="p">)</span>
+
+    <span class="c1"># Grid cell weights by global area</span>
+    <span class="n">sum_weights</span> <span class="o">=</span> <span class="n">grid_cell_weights</span><span class="p">(</span><span class="n">obs_fine</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="c1"># get list of rotation matrices to be used for all locations and months</span>
+    <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">randomization_seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">randomization_seed</span><span class="p">)</span>
+    <span class="n">rotation_matrices</span> <span class="o">=</span> <span class="p">[</span><span class="n">generate_cre_matrix</span><span class="p">(</span><span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">])</span>
+                            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">n_iterations</span><span class="p">)]</span>
+
+
+    <span class="c1"># Get chunk sizes for fine data inside coarse chunks</span>
+    <span class="n">fine_lon_chunk_size</span> <span class="o">=</span> <span class="n">lon_chunk_size</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span>
+    <span class="n">fine_lat_chunk_size</span> <span class="o">=</span> <span class="n">lat_chunk_size</span> <span class="o">*</span> <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Save intermediate arrays with chunking ready to go for downscaling</span>
+    <span class="n">sim_fine</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+    <span class="n">sim_fine_write</span> <span class="o">=</span> <span class="n">sim_fine</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">fine_lon_chunk_size</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">fine_lat_chunk_size</span><span class="p">,</span> <span class="n">time</span><span class="o">=-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span>\
+        <span class="n">to_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_path</span><span class="p">,</span> <span class="s1">&#39;sim_fine_init.zarr&#39;</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">progress</span><span class="p">(</span><span class="n">sim_fine_write</span><span class="p">)</span>
+    <span class="n">sim_fine</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="n">sim_coarse</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+    <span class="n">sim_coarse_write</span> <span class="o">=</span> <span class="n">sim_coarse</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">lon_chunk_size</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">lat_chunk_size</span><span class="p">,</span> <span class="n">time</span><span class="o">=-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span>\
+        <span class="n">to_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_path</span><span class="p">,</span> <span class="s1">&#39;sim_coarse_init.zarr&#39;</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">progress</span><span class="p">(</span><span class="n">sim_coarse_write</span><span class="p">)</span>
+    <span class="n">sim_coarse</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="n">obs_fine</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+    <span class="n">obs_fine_write</span> <span class="o">=</span> <span class="n">obs_fine</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">fine_lon_chunk_size</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">fine_lat_chunk_size</span><span class="p">,</span> <span class="n">time</span><span class="o">=-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span>\
+        <span class="n">to_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_path</span><span class="p">,</span> <span class="s1">&#39;obs_fine_init.zarr&#39;</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">progress</span><span class="p">(</span><span class="n">obs_fine_write</span><span class="p">)</span>
+    <span class="n">obs_fine</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># sim_fine.close()</span>
+    <span class="c1"># sim_coarse.close()</span>
+
+    <span class="c1"># Return info that needs to be tracked</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;temp_path&#39;</span><span class="p">:</span> <span class="n">temp_path</span><span class="p">,</span>
+        <span class="s1">&#39;variable&#39;</span><span class="p">:</span> <span class="n">variable</span><span class="p">,</span>
+        <span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="n">params</span><span class="p">,</span>
+        <span class="s1">&#39;lat_chunk_size&#39;</span><span class="p">:</span> <span class="n">lat_chunk_size</span><span class="p">,</span>
+        <span class="s1">&#39;lon_chunk_size&#39;</span><span class="p">:</span> <span class="n">lon_chunk_size</span><span class="p">,</span>
+        <span class="s1">&#39;downscaling_factors&#39;</span><span class="p">:</span> <span class="n">downscaling_factors</span><span class="p">,</span>
+        <span class="s1">&#39;input_calendar&#39;</span><span class="p">:</span> <span class="n">input_calendar</span><span class="p">,</span> 
+        <span class="s1">&#39;sum_weights&#39;</span><span class="p">:</span> <span class="n">sum_weights</span><span class="p">,</span> 
+        <span class="s1">&#39;rotation_matrices&#39;</span><span class="p">:</span> <span class="n">rotation_matrices</span><span class="p">,</span> 
+        <span class="s1">&#39;days&#39;</span><span class="p">:</span> <span class="n">days</span><span class="p">,</span> 
+        <span class="s1">&#39;month_numbers&#39;</span><span class="p">:</span> <span class="n">month_numbers</span><span class="p">,</span> 
+        <span class="s1">&#39;years&#39;</span><span class="p">:</span> <span class="n">years</span>
+        <span class="p">}</span></div>
+
+
+<span class="k">def</span> <span class="nf">analyze_input_grids</span><span class="p">(</span><span class="n">obs_fine</span><span class="p">,</span> <span class="n">sim_coarse</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Asserts that grids are of compatible sizes, and returns scaling factors,</span>
+<span class="sd">    direction of coordinate sequence, and whether the sequence is circular</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    obs_fine: xr.Dataset</span>
+<span class="sd">        Reference dataset</span>
+<span class="sd">    sim_coarse: xr.Dataset</span>
+<span class="sd">        Simulated dataset to downscale</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    downscaling_factors: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Coordinate sequences</span>
+    <span class="n">fine_lats</span> <span class="o">=</span> <span class="n">obs_fine</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">fine_lons</span> <span class="o">=</span> <span class="n">obs_fine</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">coarse_lats</span> <span class="o">=</span> <span class="n">sim_coarse</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">coarse_lons</span> <span class="o">=</span> <span class="n">sim_coarse</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="c1"># Assert that fine grid is a multiple of the coarse</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">fine_lats</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">coarse_lats</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">fine_lons</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">coarse_lons</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+
+    <span class="c1"># Get the downscaling factors</span>
+    <span class="n">f_lat</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">fine_lats</span><span class="p">)</span> <span class="o">//</span> <span class="nb">len</span><span class="p">(</span><span class="n">coarse_lats</span><span class="p">)</span>
+    <span class="n">f_lon</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">fine_lons</span><span class="p">)</span> <span class="o">//</span> <span class="nb">len</span><span class="p">(</span><span class="n">coarse_lons</span><span class="p">)</span>
+
+    <span class="c1"># Assert that we really are trying to downscale (not stay the same or upscale)</span>
+    <span class="k">assert</span> <span class="n">f_lat</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">f_lon</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;No downscaling needed. Observational grid provides no finer resolution&#39;</span>
+
+    <span class="c1"># Step sizes in coordinate sequences</span>
+    <span class="n">coarse_lat_deltas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">coarse_lats</span><span class="p">)</span>
+    <span class="n">fine_lat_deltas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">fine_lats</span><span class="p">)</span>
+    <span class="n">coarse_lon_deltas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">coarse_lons</span><span class="p">)</span>
+    <span class="n">fine_lon_deltas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">fine_lons</span><span class="p">)</span>
+
+    <span class="c1"># Assert that the sequences move in the same direction and are monotone</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">coarse_lat_deltas</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">fine_lat_deltas</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span> <span class="ow">or</span> \
+            <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">coarse_lat_deltas</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">fine_lat_deltas</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)),</span> <span class="sa">f</span><span class="s1">&#39;Latitude coords should be &#39;</span> \
+                                                                            <span class="sa">f</span><span class="s1">&#39;monotonic in the same direction.&#39;</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">coarse_lon_deltas</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">fine_lon_deltas</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span> <span class="ow">or</span> \
+            <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">coarse_lon_deltas</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">fine_lon_deltas</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)),</span> <span class="sa">f</span><span class="s1">&#39;Longitude coords should be &#39;</span> \
+                                                                            <span class="sa">f</span><span class="s1">&#39;monotonic in the same direction.&#39;</span>
+
+    <span class="c1"># Assert a constant delta in sequences</span>
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">coarse_lat_deltas</span><span class="p">,</span> <span class="n">coarse_lat_deltas</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span>
+        <span class="n">fine_lat_deltas</span><span class="p">,</span> <span class="n">fine_lat_deltas</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;Resolution should be constant for all latitude&#39;</span>
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">coarse_lon_deltas</span><span class="p">,</span> <span class="n">coarse_lon_deltas</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span>
+        <span class="n">fine_lon_deltas</span><span class="p">,</span> <span class="n">fine_lon_deltas</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;Resolution should be constant for all longitude&#39;</span>
+
+    <span class="c1"># Save the scaling factors</span>
+    <span class="n">scale_factors</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;lat&#39;</span><span class="p">:</span> <span class="n">f_lat</span><span class="p">,</span>
+        <span class="s1">&#39;lon&#39;</span><span class="p">:</span> <span class="n">f_lon</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">scale_factors</span>
+
+
+<span class="k">def</span> <span class="nf">grid_cell_weights</span><span class="p">(</span><span class="n">lats</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for finding the weight of each grid cell based on global grid area</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lats: np.array</span>
+<span class="sd">        numpy array of latitudes of fine grid</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    weight_by_lat: np.array</span>
+<span class="sd">        numpy array of grid cell area by latitude for cells in fine grid</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">weight_by_lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">lats</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">weight_by_lat</span>
+
+
+<div class="viewcode-block" id="downscale"><a class="viewcode-back" href="../../reference/api.html#basd.downscale">[docs]</a><span class="k">def</span> <span class="nf">downscale</span><span class="p">(</span><span class="n">init_output</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">clear_temp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+              <span class="n">day_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">month_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">encoding</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+              <span class="n">basd_attrs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">basd_attrs_mon</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">variable_attrs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to downscale climate data using MBCn_SD method</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    init_output: dict</span>
+<span class="sd">        Output of init_downscaling. Holds details relevant to the downscaling process scraped from input data.</span>
+<span class="sd">    output_dir: str</span>
+<span class="sd">        Path to save NetCDF output</span>
+<span class="sd">    clear_temp: bool</span>
+<span class="sd">        Whether or not to clean/remove intermediate files/directory</span>
+<span class="sd">    day_file: str</span>
+<span class="sd">        Name of the daily output data file. None if not keeping daily data.</span>
+<span class="sd">    month_file: str</span>
+<span class="sd">        Name of the monthly output data file. None if not keeping monthly data.</span>
+<span class="sd">    encoding: dict</span>
+<span class="sd">        Parameter for save as netcdf function</span>
+<span class="sd">    basd_attrs: dict</span>
+<span class="sd">        Dictionary of global attributes to write to output daily NetCDF</span>
+<span class="sd">    basd_attrs_mon: dict</span>
+<span class="sd">        Dictionary of global attributes to write to output monthly NetCDF</span>
+<span class="sd">    variable_attrs: dict</span>
+<span class="sd">        Dictionary of variable attributes to write to output NetCDF</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sim_fine: xr.Dataset</span>
+<span class="sd">        Downscaled data. Same spatial resolution as input obs_fine</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get corresponding chunks for coarse data</span>
+    <span class="n">lat_chunk_size</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;lat_chunk_size&#39;</span><span class="p">]</span>
+    <span class="n">lon_chunk_size</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;lon_chunk_size&#39;</span><span class="p">]</span>
+    <span class="n">fine_lon_chunk_size</span> <span class="o">=</span> <span class="n">lon_chunk_size</span> <span class="o">*</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;downscaling_factors&#39;</span><span class="p">][</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span>
+    <span class="n">fine_lat_chunk_size</span> <span class="o">=</span> <span class="n">lat_chunk_size</span> <span class="o">*</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;downscaling_factors&#39;</span><span class="p">][</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Open data</span>
+    <span class="n">obs_fine</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;temp_path&#39;</span><span class="p">],</span> <span class="s1">&#39;obs_fine_init.zarr&#39;</span><span class="p">))</span>
+    <span class="n">sim_fine</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;temp_path&#39;</span><span class="p">],</span> <span class="s1">&#39;sim_fine_init.zarr&#39;</span><span class="p">))</span>
+    <span class="n">sim_coarse</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;temp_path&#39;</span><span class="p">],</span> <span class="s1">&#39;sim_coarse_init.zarr&#39;</span><span class="p">))</span>
+
+    <span class="c1"># Order dimensions lon, lat, time</span>
+    <span class="n">obs_fine</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">obs_fine</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">)</span>
+    <span class="n">sim_fine</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">sim_fine</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">)</span>
+    <span class="n">sim_coarse</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">sim_coarse</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Template output dataset to populate</span>
+    <span class="n">sim_fine_out</span> <span class="o">=</span> <span class="n">sim_fine</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Chunk grid area cell weights</span>
+    <span class="n">fine_size</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">obs_fine</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">],</span> <span class="n">obs_fine</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">sum_weights</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;sum_weights&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">fine_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">fine_size</span><span class="p">)</span>
+    <span class="n">fine_chunk_size</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">fine_lat_chunk_size</span><span class="p">,</span> <span class="n">fine_lon_chunk_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">chunk_sum_weights</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span><span class="n">sum_weights</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="n">fine_chunk_size</span><span class="p">)</span>
+
+    <span class="c1"># Downscale with dask map_blocks handling parallelization</span>
+    <span class="c1"># Set up dask computation</span>
+    <span class="n">ba_output_data</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">map_blocks</span><span class="p">(</span><span class="n">downscale_chunk</span><span class="p">,</span>
+                                    <span class="n">obs_fine</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                    <span class="n">sim_coarse</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                    <span class="n">sim_fine</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                    <span class="n">chunk_sum_weights</span><span class="p">,</span>
+                                    <span class="n">params</span><span class="o">=</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">],</span>
+                                    <span class="n">month_numbers</span><span class="o">=</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;month_numbers&#39;</span><span class="p">],</span>
+                                    <span class="n">downscaling_factors</span><span class="o">=</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;downscaling_factors&#39;</span><span class="p">],</span>
+                                    <span class="n">rotation_matrices</span><span class="o">=</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;rotation_matrices&#39;</span><span class="p">],</span>
+                                    <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="n">sim_fine</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">chunks</span><span class="p">)</span>
+
+    <span class="c1"># Put statistically downscaled data into the new Dataset</span>
+    <span class="n">sim_fine_out</span><span class="p">[</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">ba_output_data</span>
+
+    <span class="c1"># If an output file is provided, write data to that file as .nc</span>
+    <span class="k">if</span> <span class="n">day_file</span> <span class="ow">or</span> <span class="n">month_file</span><span class="p">:</span>
+        <span class="n">save_downscale_nc</span><span class="p">(</span><span class="n">sim_fine_out</span><span class="p">,</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">],</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;input_calendar&#39;</span><span class="p">],</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">day_file</span><span class="p">,</span> <span class="n">month_file</span><span class="p">,</span> <span class="n">encoding</span><span class="p">,</span> <span class="n">basd_attrs</span><span class="p">,</span> <span class="n">basd_attrs_mon</span><span class="p">,</span> <span class="n">variable_attrs</span><span class="p">)</span>
+
+    <span class="c1"># Clear the temporary directory. Optional but happens by default</span>
+    <span class="k">if</span> <span class="n">clear_temp</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;temp_path&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error: </span><span class="si">%s</span><span class="s2"> : </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;temp_path&#39;</span><span class="p">],</span> <span class="n">e</span><span class="o">.</span><span class="n">strerror</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">sim_fine_out</span></div>
+
+
+<span class="k">def</span> <span class="nf">save_downscale_nc</span><span class="p">(</span><span class="n">sim_fine_out</span><span class="p">,</span> <span class="n">variable</span><span class="p">,</span> <span class="n">input_calendar</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">day_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">month_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">encoding</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">basd_attrs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">basd_attrs_mon</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">variable_attrs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Saves Downscaled data to NetCDF files at specific path</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sim_fine_out: xr.Dataset</span>
+<span class="sd">        Downscaled simulation data to save as NetCDF</span>
+<span class="sd">    variable: str</span>
+<span class="sd">        Name of the climate variable which is currently being used</span>
+<span class="sd">    input_calendar: str</span>
+<span class="sd">        The calendar used by the input datasets (ex. gregorian, noleap, 360_day)</span>
+<span class="sd">    day_file: str</span>
+<span class="sd">        Name of the output daily data NetCDF file (optional)</span>
+<span class="sd">    month_file: str</span>
+<span class="sd">        Name of the output monthly data NetCDF file (optional)</span>
+<span class="sd">    encoding: dict</span>
+<span class="sd">        Parameter for to_netcdf function</span>
+<span class="sd">    basd_attrs: dict</span>
+<span class="sd">        Dictionary of global attributes to write to output daily NetCDF</span>
+<span class="sd">    basd_attrs_mon: dict</span>
+<span class="sd">        Dictionary of global attributes to write to output monthly NetCDF</span>
+<span class="sd">    variable_attrs: dict</span>
+<span class="sd">        Dictionary of variable attributes to write to output NetCDF</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># If attributes supplied, replace them</span>
+    <span class="k">if</span> <span class="n">basd_attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sim_fine_out</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">basd_attrs</span>    
+    <span class="k">if</span> <span class="n">variable_attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sim_fine_out</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">variable_attrs</span>
+
+    <span class="c1"># Make sure we&#39;ve computed</span>
+    <span class="c1"># sim_fine_out = sim_fine_out.transpose(&#39;time&#39;, &#39;lat&#39;, &#39;lon&#39;)</span>
+    <span class="n">sim_fine_out</span> <span class="o">=</span> <span class="n">sim_fine_out</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+
+    <span class="c1"># If not saving daily data in long term</span>
+    <span class="n">day_flag</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">day_file</span><span class="p">:</span>
+        <span class="n">day_flag</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">date_str</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">today</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span>
+        <span class="n">day_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s1">_sim_fut_ba_day_</span><span class="si">{</span><span class="n">date_str</span><span class="si">}</span><span class="s1">.nc&#39;</span>
+
+    <span class="c1"># Try converting calendar back to input calendar</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">sim_fine_out</span> <span class="o">=</span> <span class="n">sim_fine_out</span><span class="o">.</span><span class="n">convert_calendar</span><span class="p">(</span><span class="n">input_calendar</span><span class="p">,</span> <span class="n">align_on</span><span class="o">=</span><span class="s1">&#39;date&#39;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="ne">AttributeError</span><span class="p">(</span><span class="s1">&#39;Unable to convert calendar&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Save daily data</span>
+    <span class="n">sim_fine_out</span> <span class="o">=</span> <span class="n">sim_fine_out</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+    <span class="n">sim_fine_out</span><span class="p">[[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="p">]]</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">day_file</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
+    <span class="n">sim_fine_out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># If monthly, save monthly aggregation</span>
+    <span class="k">if</span> <span class="n">month_file</span><span class="p">:</span>
+
+        <span class="c1"># Read in Data</span>
+        <span class="n">sim_fine_out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_mfdataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">day_file</span><span class="p">),</span> <span class="n">chunks</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="mi">365</span><span class="p">})</span>
+
+        <span class="c1"># Compute Monthly Means</span>
+        <span class="n">sim_fine_out</span> <span class="o">=</span> <span class="n">sim_fine_out</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="s1">&#39;M&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+
+        <span class="c1"># If attributes supplied, set them</span>
+        <span class="k">if</span> <span class="n">basd_attrs_mon</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sim_fine_out</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">basd_attrs_mon</span>    
+        <span class="k">if</span> <span class="n">variable_attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sim_fine_out</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">variable_attrs</span>
+
+        <span class="c1"># Write out</span>
+        <span class="n">sim_fine_out</span> <span class="o">=</span> <span class="n">sim_fine_out</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+        <span class="n">write_job</span> <span class="o">=</span> <span class="n">sim_fine_out</span><span class="p">[[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="n">variable</span><span class="p">]]</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">month_file</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span> <span class="n">compute</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">progress</span><span class="p">(</span><span class="n">write_job</span><span class="p">)</span>
+
+        <span class="c1"># Close</span>
+        <span class="n">sim_fine_out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="c1"># Delete daily data if not wanted</span>
+    <span class="k">if</span> <span class="n">day_flag</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">day_file</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">downscale_one_location</span><span class="p">(</span><span class="n">init_output</span><span class="p">,</span> <span class="n">i_loc</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">clear_temp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to downscale a single coarse grid cell</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    init_output: dict</span>
+<span class="sd">        output of the downscaling initialization</span>
+<span class="sd">    i_loc: dict</span>
+<span class="sd">        Dictionary of lat, lon index, for coarse cell</span>
+<span class="sd">    clear_temp: bool</span>
+<span class="sd">        Whether to clear intermediate results after downscaling at this location. Default is not to do this.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sim_fine_loc: ndarray</span>
+<span class="sd">        3D array of downscaled coarse grid. Size is latitude scaling factor by longitude scaling</span>
+<span class="sd">        factor by time</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract intitialization details that we use multiple times</span>
+    <span class="n">temp_path</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;temp_path&#39;</span><span class="p">]</span>
+    <span class="n">variable</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">]</span>
+    <span class="n">month_numbers</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;month_numbers&#39;</span><span class="p">]</span>
+    <span class="n">downscaling_factors</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;downscaling_factors&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Open data</span>
+    <span class="n">obs_fine</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_path</span><span class="p">,</span> <span class="s1">&#39;obs_fine_init.zarr&#39;</span><span class="p">))</span>
+    <span class="n">sim_fine</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_path</span><span class="p">,</span> <span class="s1">&#39;sim_fine_init.zarr&#39;</span><span class="p">))</span>
+    <span class="n">sim_coarse</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_path</span><span class="p">,</span> <span class="s1">&#39;sim_coarse_init.zarr&#39;</span><span class="p">))</span>
+
+    <span class="c1"># Extract intitialization details that we use multiple times</span>
+    <span class="n">variable</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;variable&#39;</span><span class="p">]</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">]</span>
+    <span class="n">month_numbers</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;month_numbers&#39;</span><span class="p">]</span>
+    <span class="n">downscaling_factors</span> <span class="o">=</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;downscaling_factors&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Order dimensions lon, lat, time</span>
+    <span class="n">obs_fine</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs_fine</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">)</span>
+    <span class="n">sim_fine</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span> <span class="o">=</span> <span class="n">sim_fine</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">)</span>
+    <span class="n">sim_coarse</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span> <span class="o">=</span> <span class="n">sim_coarse</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Turn location dictionary into tuple (lat index, lon index)</span>
+    <span class="n">loc_tuple</span> <span class="o">=</span> <span class="p">(</span><span class="n">i_loc</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">],</span> <span class="n">i_loc</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">])</span>
+
+    <span class="c1"># Get data at location</span>
+    <span class="n">data</span><span class="p">,</span> <span class="n">sum_weights_loc</span> <span class="o">=</span> <span class="n">get_data_at_loc</span><span class="p">(</span><span class="n">loc_tuple</span><span class="p">,</span>
+                                            <span class="n">obs_fine</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                            <span class="n">sim_coarse</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                            <span class="n">sim_fine</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                            <span class="n">month_numbers</span><span class="p">,</span> <span class="n">downscaling_factors</span><span class="p">,</span> <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;sum_weights&#39;</span><span class="p">])</span>
+
+    <span class="c1"># abort here if there are only missing values in at least one time series</span>
+    <span class="c1"># do not abort though if the if_all_invalid_use option has been specified</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">if_all_invalid_use</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">sdu</span><span class="o">.</span><span class="n">only_missing_values_in_at_least_one_time_series</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i_loc</span><span class="si">}</span><span class="s1"> skipped due to missing data&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="c1"># compute mean value over all time steps for invalid value sampling</span>
+    <span class="n">long_term_mean</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">long_term_mean</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">average_valid_values</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">if_all_invalid_use</span><span class="p">,</span>
+                                                        <span class="n">params</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">lower_threshold</span><span class="p">,</span>
+                                                        <span class="n">params</span><span class="o">.</span><span class="n">upper_bound</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">upper_threshold</span><span class="p">)</span>
+
+    <span class="c1"># Result in flattened format</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">downscale_month_by_month</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sum_weights_loc</span><span class="p">,</span>
+                                        <span class="n">long_term_mean</span><span class="p">,</span> <span class="n">month_numbers</span><span class="p">,</span>
+                                        <span class="n">init_output</span><span class="p">[</span><span class="s1">&#39;rotation_matrices&#39;</span><span class="p">],</span> <span class="n">params</span><span class="p">)</span>
+
+    <span class="c1"># Reshape to grid</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">],</span>
+                                <span class="n">downscaling_factors</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span>
+                                <span class="n">month_numbers</span><span class="p">[</span><span class="s1">&#39;sim_fine&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  <!-- Previous / next buttons -->
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Noah Prime
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  <p class="copyright">
+    
+      © Copyright 2022, Noah Prime.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
