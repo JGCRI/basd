@@ -2,9 +2,8 @@
 
 # basd
 
-#### `basd` is an open-source Python package for bias adjustment and statistical downscaling of climate model output.
+`basd` is an open-source Python package for bias adjustment and statistical downscaling of climate model output.
 
-### Purpose
 `basd` was created to:
 
   - Bias adjust climate variables at specific locations or by global grid,
@@ -17,29 +16,27 @@
 
 #### Installation
 
-1. Clone this repo: 
+`basd` requires the use of `conda` and the `xesmf` package. Start by creating a new virtual environment and activate it:
 
-        git clone https://github.com/JGCRI/basd
+```
+conda create --name basd_env
+conda activate basd_env
+```
 
-2. Set up Python virtual environment, for example using conda:
+Then install `basd` from GitHub:
 
-        conda create -n envbasd python=3.9 anaconda
-   Though the name of the environment and exact Python version can differ. Then you'd have to activate the
-   environment with
+```
+pip install git+https://github.com/JGCRI/basd.git
+```
 
-        conda activate envbasd
-3. Navigate to the cloned repository:
+and the `xesmf` package
 
-        cd /<path to directory>/basd
-   Install the `basd` package using developer mode:
-
-        python setup.py develop
+```
+conda install -c conda-forge xesmf
+```
 
 #### Using `basd`
-Once you've clone the repo and installed the package, take a look at the **quickstarter.ipynb** in the
-**notebooks** directory. This uses a data example included in the repo to show you around the package.
+Once you've set up your environment, take a look at the **quickstarter.ipynb** in the **notebooks** directory. This uses a data example included in the repo to show you around the package.
 
-### Documentation
-User guide and details on the method can be found on the [Wiki page](https://github.com/JGCRI/basd/wiki). 
-Links to further references can be found on those pages.
+Take a look also at the [website](https://jgcri.github.io/basd/index.html) and [Wiki pages](https://github.com/JGCRI/basd/wiki) for more examples and documentation. Links to further references can be found on those pages.
 
