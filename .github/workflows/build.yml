@@ -2,7 +2,14 @@ name: build
 
 # on: [push, pull_request]
 # Temp just on PR so not running while trying to test other workflows
-on: [push, pull_request]
+on: 
+  push:
+    branches:
+      - 'main'
+      - 'dev'
+  pull_request:
+    branches:
+      - 'main'
 
 jobs:
   build-linux:
@@ -24,6 +31,9 @@ jobs:
       uses: esmf-org/install-esmf-action@v1
       env:
         ESMF_NETCDF: nc-config
+      with:
+        version: v8.4.2
+        esmpy: true
     - name: Add conda to system path
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
