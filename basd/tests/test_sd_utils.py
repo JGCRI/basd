@@ -4,7 +4,6 @@ import unittest
 import pandas as pd
 import xarray as xr
 
-from basd import Downscaler
 from basd import Parameters
 import basd.sd_utils as sdu
 
